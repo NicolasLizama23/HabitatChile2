@@ -1,0 +1,60 @@
+{% extends 'gestion/base.html' %}
+
+{% block title %}Perfil de usuario{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">Perfil</div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Usuario</label>
+                            <input class="form-control" value="{{ request.user.username }}" disabled>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nombre</label>
+                            <input name="nombre" class="form-control" value="{{ request.user.first_name }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Apellidos</label>
+                            <input name="apellidos" class="form-control" value="{{ request.user.last_name }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input name="email" type="email" class="form-control" value="{{ request.user.email }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">RUT (para registrarse como beneficiario)</label>
+                            <input name="rut" class="form-control" value="{{ rut_value|default:'' }}">
+                        </div>
+                        {% if user_tipo == 'empresa' %}
+                        <hr>
+                        <h5>Información de Empresa</h5>
+                        <div class="mb-3">
+                            <label class="form-label">Razón Social</label>
+                            <input name="empresa_razon_social" class="form-control" value="{{ usuariosistema.razon_social|default:'' }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">RUT Empresa</label>
+                            <input name="empresa_rut" class="form-control" value="{{ usuariosistema.rut_empresa|default:'' }}">
+                        </div>
+                        {% endif %}
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                {% if user_tipo == 'usuario' %}
+                                    <a class="btn btn-secondary" href="#">Ver mis postulaciones</a>
+                                {% elif user_tipo == 'empresa' %}
+                                    <a class="btn btn-secondary" href="{% url 'gestion:proyectos_list' %}">Ver proyectos de la empresa</a>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <button class="btn btn-primary">Guardar</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,750 @@
+{% extends 'gestion/base.html' %}
+
+{% block title %}{{ beneficiario.nombre }} {{ beneficiario.apellidos }} - Detalle{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-4">
+    <div>
+        <h1 class="h2 text-white mb-2">
+            <i class="bi bi-person-badge-fill"></i> Perfil del Beneficiario
+        </h1>
+        <p class="text-white opacity-75 mb-0">Información completa y detallada</p>
+    </div>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'gestion:beneficiarios_list' %}" class="btn btn-light me-2">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+        <button type="button" class="btn btn-warning" onclick="openEditModal()">
+            <i class="bi bi-pencil-square"></i> Editar
+        </button>
+        <button type="button" class="btn btn-danger ms-2" onclick="eliminarBeneficiario()">
+            <i class="bi bi-trash"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Header Card con foto -->
+<div class="card mb-4 profile-header">
+    <div class="card-body p-4">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="profile-avatar">
+                    <i class="bi bi-person-circle"></i>
+                    <div class="status-indicator {% if beneficiario.estado_beneficiario == 'Activo' %}active{% endif %}"></div>
+                </div>
+            </div>
+            <div class="col">
+                <h2 class="mb-1">{{ beneficiario.nombre }} {{ beneficiario.apellidos }}</h2>
+                <p class="text-muted mb-2">
+                    <i class="bi bi-credit-card-2-front"></i> RUT: {{ beneficiario.rut }}
+                </p>
+                <div class="d-flex gap-2 flex-wrap">
+                    {% if beneficiario.estado_beneficiario == 'Activo' %}
+                        <span class="badge bg-success-gradient">
+                            <i class="bi bi-check-circle-fill"></i> {{ beneficiario.estado_beneficiario }}
+                        </span>
+                    {% elif beneficiario.estado_beneficiario == 'Pendiente' %}
+                        <span class="badge bg-warning-gradient">
+                            <i class="bi bi-clock-fill"></i> {{ beneficiario.estado_beneficiario }}
+                        </span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ beneficiario.estado_beneficiario }}</span>
+                    {% endif %}
+                    <span class="badge bg-info-gradient">
+                        <i class="bi bi-calendar"></i> Registro: {{ beneficiario.fecha_registro|date:"d/m/Y" }}
+                    </span>
+                </div>
+            </div>
+            <div class="col-auto">
+                <div class="score-badge">
+                    <div class="score-number">{{ beneficiario.puntaje_socioeconomico|default:"N/A" }}</div>
+                    <small>Puntaje</small>
+                </div>
+            </div>
+        </div>
+
+                <!-- Modal de edición -->
+                <div class="modal fade" id="editBeneficiarioModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-lg modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Editar Beneficiario</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                            </div>
+                            <form id="editBeneficiarioForm">
+                            <div class="modal-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Nombre</label>
+                                        <input id="edit-nombre" name="nombre" class="form-control">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Apellidos</label>
+                                        <input id="edit-apellidos" name="apellidos" class="form-control">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Teléfono</label>
+                                        <input id="edit-telefono" name="telefono" class="form-control">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Email</label>
+                                        <input id="edit-email" name="email" type="email" class="form-control">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Dirección</label>
+                                        <input id="edit-direccion" name="direccion" class="form-control">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Ingresos Familiares</label>
+                                        <input id="edit-ingresos" name="ingresos_familiares" class="form-control">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Número de integrantes</label>
+                                        <input id="edit-integrantes" name="numero_integrantes" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                            </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Información Personal -->
+    <div class="col-lg-6">
+        <div class="card info-card h-100">
+            <div class="card-header bg-gradient-primary">
+                <h5 class="mb-0">
+                    <i class="bi bi-person-fill"></i> Información Personal
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-icon bg-primary-light">
+                            <i class="bi bi-person"></i>
+                        </div>
+                        <div class="info-content">
+                            <small class="text-muted">Nombre Completo</small>
+                            <strong>{{ beneficiario.nombre }} {{ beneficiario.apellidos }}</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-icon bg-success-light">
+                            <i class="bi bi-calendar-event"></i>
+                        </div>
+                        <div class="info-content">
+                            <small class="text-muted">Fecha Nacimiento</small>
+                            <strong>{{ beneficiario.fecha_nacimiento|date:"d/m/Y" }}</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-icon bg-info-light">
+                            <i class="bi bi-heart"></i>
+                        </div>
+                        <div class="info-content">
+                            <small class="text-muted">Estado Civil</small>
+                            <strong>{{ beneficiario.estado_civil }}</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-icon bg-warning-light">
+                            <i class="bi bi-telephone"></i>
+                        </div>
+                        <div class="info-content">
+                            <small class="text-muted">Teléfono</small>
+                            <strong>{{ beneficiario.telefono }}</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-icon bg-danger-light">
+                            <i class="bi bi-envelope"></i>
+                        </div>
+                        <div class="info-content">
+                            <small class="text-muted">Email</small>
+                            <strong>{{ beneficiario.email }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información de Ubicación -->
+    <div class="col-lg-6">
+        <div class="card info-card h-100">
+            <div class="card-header bg-gradient-success">
+                <h5 class="mb-0">
+                    <i class="bi bi-geo-alt-fill"></i> Ubicación
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-icon bg-primary-light">
+                            <i class="bi bi-house-door"></i>
+                        </div>
+                        <div class="info-content">
+                            <small class="text-muted">Dirección</small>
+                            <strong>{{ beneficiario.direccion }}</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-icon bg-success-light">
+                            <i class="bi bi-building"></i>
+                        </div>
+                        <div class="info-content">
+                            <small class="text-muted">Municipio</small>
+                            <strong>{{ beneficiario.id_municipio.nombre_municipio|default:"N/A" }}</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-icon bg-info-light">
+                            <i class="bi bi-map"></i>
+                        </div>
+                        <div class="info-content">
+                            <small class="text-muted">Región</small>
+                            <strong>{{ beneficiario.id_municipio.id_region.nombre_region|default:"N/A" }}</strong>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    {% if mapa_html %}
+                        <div class="map-container">
+                            {{ mapa_html|safe }}
+                        </div>
+                    {% else %}
+                        <div class="map-preview">
+                            <i class="bi bi-pin-map-fill"></i>
+                            <span>Ubicación no disponible</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información Socioeconómica -->
+    <div class="col-lg-8">
+        <div class="card info-card">
+            <div class="card-header bg-gradient-warning">
+                <h5 class="mb-0">
+                    <i class="bi bi-cash-stack"></i> Información Socioeconómica
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="metric-card">
+                            <div class="metric-icon">
+                                <i class="bi bi-currency-dollar"></i>
+                            </div>
+                            <div class="metric-value">${{ beneficiario.ingresos_familiares|floatformat:0 }}</div>
+                            <div class="metric-label">Ingresos Familiares</div>
+                            <div class="metric-trend up">
+                                <i class="bi bi-arrow-up"></i> Mensual
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="metric-card">
+                            <div class="metric-icon">
+                                <i class="bi bi-people"></i>
+                            </div>
+                            <div class="metric-value">{{ beneficiario.numero_integrantes }}</div>
+                            <div class="metric-label">Integrantes</div>
+                            <div class="metric-trend">
+                                Grupo familiar
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="metric-card highlight">
+                            <div class="metric-icon">
+                                <i class="bi bi-star-fill"></i>
+                            </div>
+                            <div class="metric-value">{{ beneficiario.puntaje_socioeconomico|default:"N/A" }}</div>
+                            <div class="metric-label">Puntaje Socioeconómico</div>
+                            <div class="metric-trend">
+                                Actualizado
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <div class="progress-label mb-2">
+                        <span>Progreso de Evaluación</span>
+                        <strong>85%</strong>
+                    </div>
+                    <div class="progress custom-progress">
+                        <div class="progress-bar" style="width: 85%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Postulaciones -->
+    <div class="col-lg-4">
+        <div class="card info-card">
+            <div class="card-header bg-gradient-info">
+                <h5 class="mb-0">
+                    <i class="bi bi-file-earmark-text-fill"></i> Postulaciones
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if postulaciones %}
+                    <div class="postulaciones-list">
+                        {% for postulacion in postulaciones %}
+                        <div class="postulacion-item">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="mb-0">{{ postulacion.id_proyecto.nombre_proyecto }}</h6>
+                                <span class="badge bg-info-gradient">{{ postulacion.estado_postulacion }}</span>
+                            </div>
+                            <div class="postulacion-details">
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar3"></i> {{ postulacion.fecha_postulacion|date:"d/m/Y" }}
+                                </small>
+                                <span class="postulacion-score">
+                                    <i class="bi bi-star-fill"></i> {{ postulacion.puntaje_asignado|default:"N/A" }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <i class="bi bi-inbox"></i>
+                        <p>No tiene postulaciones registradas</p>
+                        <button class="btn btn-sm btn-primary">
+                            <i class="bi bi-plus"></i> Nueva Postulación
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Timeline de actividad -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="bi bi-clock-history"></i> Historial de Actividad
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="timeline">
+            <div class="timeline-item">
+                <div class="timeline-marker bg-success"></div>
+                <div class="timeline-content">
+                    <h6>Registro completado</h6>
+                    <p class="text-muted mb-0">Se completó el registro del beneficiario</p>
+                    <small class="text-muted">{{ beneficiario.fecha_registro|date:"d/m/Y H:i" }}</small>
+                </div>
+            </div>
+            
+            <div class="timeline-item">
+                <div class="timeline-marker bg-info"></div>
+                <div class="timeline-content">
+                    <h6>Documentación revisada</h6>
+                    <p class="text-muted mb-0">Se verificó la documentación presentada</p>
+                    <small class="text-muted">15/10/2024 14:30</small>
+                </div>
+            </div>
+            
+            <div class="timeline-item">
+                <div class="timeline-marker bg-warning"></div>
+                <div class="timeline-content">
+                    <h6>Evaluación pendiente</h6>
+                    <p class="text-muted mb-0">En espera de evaluación socioeconómica</p>
+                    <small class="text-muted">20/10/2024 09:00</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.profile-header {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+    border: 2px solid rgba(99, 102, 241, 0.1);
+}
+
+.profile-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 3rem;
+    position: relative;
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+}
+
+.status-indicator {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #dc3545;
+    border: 3px solid white;
+}
+
+.status-indicator.active {
+    background: #10b981;
+    animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+}
+
+.score-badge {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+}
+
+.score-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.badge-gradient, .badge.bg-success-gradient, .badge.bg-warning-gradient, .badge.bg-info-gradient {
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+}
+
+.bg-success-gradient { background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%); }
+.bg-warning-gradient { background: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%); }
+.bg-info-gradient { background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%); }
+
+.info-card .card-header {
+    color: white;
+    border: none;
+}
+
+.bg-gradient-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); }
+.bg-gradient-success { background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%); }
+.bg-gradient-warning { background: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%); }
+.bg-gradient-info { background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%); }
+
+.info-grid {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.info-item:hover {
+    background: rgba(99, 102, 241, 0.05);
+    transform: translateX(5px);
+}
+
+.info-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.bg-primary-light { background: rgba(99, 102, 241, 0.1); color: var(--primary); }
+.bg-success-light { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+.bg-info-light { background: rgba(6, 182, 212, 0.1); color: var(--info); }
+.bg-warning-light { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+.bg-danger-light { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+
+.info-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.map-preview {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+    padding: 2rem;
+    border-radius: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.map-preview:hover {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
+    transform: translateY(-2px);
+}
+
+.map-preview i {
+    font-size: 2rem;
+    color: var(--primary);
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.metric-card {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+    padding: 1.5rem;
+    border-radius: 16px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.metric-card.highlight {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+}
+
+.metric-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    opacity: 0.8;
+}
+
+.metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.metric-label {
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+.metric-trend {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.metric-trend.up {
+    color: var(--success);
+}
+
+.custom-progress {
+    height: 12px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.custom-progress .progress-bar {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    border-radius: 10px;
+    transition: width 1s ease;
+}
+
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+}
+
+.postulaciones-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.postulacion-item {
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 12px;
+    border-left: 4px solid var(--info);
+    transition: all 0.3s ease;
+}
+
+.postulacion-item:hover {
+    background: rgba(6, 182, 212, 0.05);
+    transform: translateX(5px);
+}
+
+.postulacion-details {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.5rem;
+}
+
+.postulacion-score {
+    color: var(--warning);
+    font-weight: 600;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    color: var(--primary);
+    opacity: 0.3;
+    margin-bottom: 1rem;
+}
+
+.timeline {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 9px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--primary), var(--secondary));
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 2rem;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -2rem;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.timeline-content {
+    background: rgba(0, 0, 0, 0.02);
+    padding: 1rem;
+    border-radius: 12px;
+}
+
+.timeline-content h6 {
+    margin-bottom: 0.5rem;
+    color: var(--primary);
+}
+</style>
+
+<script>
+function openEditModal() {
+    const modal = document.getElementById('editBeneficiarioModal');
+    if (!modal) return;
+    // prefills
+    document.getElementById('edit-nombre').value = '{{ beneficiario.nombre|default:"" }}';
+    document.getElementById('edit-apellidos').value = '{{ beneficiario.apellidos|default:"" }}';
+    document.getElementById('edit-telefono').value = '{{ beneficiario.telefono|default:"" }}';
+    document.getElementById('edit-email').value = '{{ beneficiario.email|default:"" }}';
+    document.getElementById('edit-direccion').value = '{{ beneficiario.direccion|default:"" }}';
+    document.getElementById('edit-ingresos').value = '{{ beneficiario.ingresos_familiares|default:"" }}';
+    document.getElementById('edit-integrantes').value = '{{ beneficiario.numero_integrantes|default:"" }}';
+    // show bootstrap modal
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+}
+
+function eliminarBeneficiario() {
+    if (confirm('¿Está seguro de eliminar este beneficiario?')) {
+        const url = "{% url 'gestion:beneficiario_delete' beneficiario.id_beneficiario %}";
+        fetch(url, { method: 'POST', headers: { 'X-CSRFToken': csrftoken } })
+        .then(r => r.json())
+        .then(j => {
+            if (j.ok) {
+                notify('Beneficiario eliminado', 'success');
+                setTimeout(() => { window.location.href = "{% url 'gestion:beneficiarios_list' %}"; }, 800);
+            } else {
+                notify('Error al eliminar', 'danger');
+            }
+        }).catch(e => { notify('Error al eliminar', 'danger'); });
+    }
+}
+
+// Manejo del form de edición
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('editBeneficiarioForm');
+    if (!form) return;
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const url = "{% url 'gestion:beneficiario_update' beneficiario.id_beneficiario %}";
+        const payload = {
+            nombre: document.getElementById('edit-nombre').value,
+            apellidos: document.getElementById('edit-apellidos').value,
+            telefono: document.getElementById('edit-telefono').value,
+            email: document.getElementById('edit-email').value,
+            direccion: document.getElementById('edit-direccion').value,
+            ingresos_familiares: document.getElementById('edit-ingresos').value,
+            numero_integrantes: document.getElementById('edit-integrantes').value,
+        };
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+            body: JSON.stringify(payload)
+        }).then(r => r.json())
+        .then(j => {
+            if (j.error) { notify(j.error, 'danger'); return; }
+            notify('Beneficiario actualizado', 'success');
+            // cerrar modal y recargar para asegurar consistencia en toda la página
+            const bs = bootstrap.Modal.getInstance(document.getElementById('editBeneficiarioModal'));
+            if (bs) bs.hide();
+            setTimeout(() => { location.reload(); }, 700);
+        }).catch(e => { notify('Error al actualizar', 'danger'); });
+    });
+});
+
+// Animación de entrada
+document.addEventListener('DOMContentLoaded', () => {
+    const cards = document.querySelectorAll('.info-card, .metric-card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            card.style.transition = 'all 0.6s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,903 @@
+{% extends 'gestion/base.html' %}
+
+{% block title %}Calendario - iConstruction{% endblock %}
+
+{% block extra_css %}
+<style>
+    .calendar-container {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 1rem;
+        padding: 2rem;
+        color: white;
+        margin-bottom: 2rem;
+    }
+
+    .calendar-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .calendar-icon {
+        width: 60px;
+        height: 60px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+    }
+
+    .stats-card {
+        border-radius: 1rem;
+        border: none;
+        padding: 1.5rem;
+        height: 100%;
+        transition: all 0.3s ease;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    }
+
+    .stats-card.purple { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+    .stats-card.green { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; }
+    .stats-card.pink { background: linear-gradient(135deg, #ee9ca7 0%, #ffdde1 100%); color: #333; }
+    .stats-card.cyan { background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%); color: white; }
+
+    .stats-number {
+        font-size: 3rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .stats-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        margin-top: 0.5rem;
+    }
+
+    .calendar-nav {
+        background: #2c3e50;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .calendar-nav button {
+        background: #34495e;
+        border: none;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .calendar-nav button:hover {
+        background: #4a5f7f;
+        transform: scale(1.05);
+    }
+
+    .calendar-nav button.active {
+        background: #667eea;
+    }
+
+    .month-title {
+        text-align: center;
+        color: white;
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+
+    .view-toggle {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .view-toggle button {
+        background: #34495e;
+        border: none;
+        color: white;
+        padding: 0.5rem 1.5rem;
+        border-radius: 0.5rem;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+    }
+
+    .view-toggle button.active {
+        background: #667eea;
+    }
+
+    .calendar-grid {
+        background: #1e2a38;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        overflow: hidden;
+    }
+
+    .calendar-weekdays {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .weekday {
+        text-align: center;
+        font-weight: 600;
+        color: #a8b2c1;
+        padding: 1rem;
+        background: #2c3e50;
+        border-radius: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .calendar-days {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 0.5rem;
+    }
+
+    .calendar-day {
+        background: #2c3e50;
+        border-radius: 0.75rem;
+        min-height: 120px;
+        padding: 0.75rem;
+        color: white;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        border: 2px solid transparent;
+    }
+
+    .calendar-day:hover {
+        background: #34495e;
+        border-color: #667eea;
+        transform: scale(1.02);
+    }
+
+    .calendar-day.other-month {
+        opacity: 0.4;
+    }
+
+    .calendar-day.today {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-color: #fff;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .day-number {
+        font-weight: 600;
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .day-events {
+        margin-top: 0.5rem;
+    }
+
+    .event-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 4px;
+    }
+
+    .event-item {
+        background: rgba(255,255,255,0.1);
+        border-radius: 0.375rem;
+        padding: 0.25rem 0.5rem;
+        margin-bottom: 0.25rem;
+        font-size: 0.75rem;
+        border-left: 3px solid;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .event-item.event-task { border-left-color: #3498db; }
+    .event-item.event-meeting { border-left-color: #e74c3c; }
+    .event-item.event-deadline { border-left-color: #f39c12; }
+    .event-item.event-project { border-left-color: #2ecc71; }
+
+    .filters-section {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .filter-checkbox {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .filter-checkbox:hover {
+        background: #e9ecef;
+    }
+
+    .filter-checkbox input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
+    .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-right: 1.5rem;
+        font-size: 0.9rem;
+    }
+
+    .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+    }
+
+    /* Modal de evento */
+    .event-modal .modal-content {
+        border-radius: 1rem;
+        border: none;
+    }
+
+    /* Ensure modal stacks above backdrop and other UI elements to avoid click interception */
+    .modal-backdrop { z-index: 1990 !important; }
+    .modal { z-index: 2000 !important; }
+
+    .event-modal .modal-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 1rem 1rem 0 0;
+        padding: 1.5rem;
+    }
+
+    .event-form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .event-type-selector {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
+    }
+
+    .event-type-btn {
+        padding: 1rem;
+        border: 2px solid #dee2e6;
+        border-radius: 0.75rem;
+        background: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+    }
+
+    .event-type-btn:hover {
+        border-color: #667eea;
+        background: #f8f9fa;
+    }
+
+    .event-type-btn.active {
+        border-color: #667eea;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .event-type-btn i {
+        font-size: 1.5rem;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+
+    @media (max-width: 768px) {
+        .calendar-days {
+            gap: 0.25rem;
+        }
+        
+        .calendar-day {
+            min-height: 80px;
+            padding: 0.5rem;
+        }
+        
+        .stats-number {
+            font-size: 2rem;
+        }
+    }
+    /* Fix FullCalendar display and hide static nav duplicates */
+    .calendar-grid #fullcalendar {
+        min-height: 600px;
+        background: #ffffff;
+        color: #222;
+        border-radius: 0.75rem;
+        padding: 1rem;
+    }
+
+    /* Hide the static month title and nav buttons to let FullCalendar render its toolbar */
+    .calendar-nav .month-title,
+    .calendar-nav .view-toggle,
+    .calendar-nav .btn-nav {
+        display: none !important;
+    }
+
+    /* FullCalendar dark theme overrides */
+    .calendar-grid {
+        padding: 1rem;
+        background: rgba(20,26,33,0.6);
+        border-radius: 12px;
+    }
+    /* Toolbar */
+    .fc .fc-toolbar-kit { display:flex; align-items:center; gap:12px; }
+    .fc .fc-toolbar-chunk { display:flex; gap:8px; align-items:center; }
+    .fc .fc-button {
+        background: #34495e;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 6px 10px;
+        box-shadow: none;
+    }
+    .fc .fc-button:hover, .fc .fc-button:active, .fc .fc-button:focus {
+        background: linear-gradient(90deg,#667eea,#8b5cf6);
+        color: #fff;
+    }
+    .fc .fc-button-primary {
+        background: linear-gradient(90deg,#667eea,#8b5cf6);
+        color: #fff;
+    }
+    .fc .fc-toolbar-title {
+        color: #fff;
+        font-weight: 700;
+    }
+    /* Day cells */
+    .fc table.fc-scrollgrid { background: transparent; }
+    .fc .fc-daygrid-day {
+        background: #17202a;
+        border-radius: 6px;
+        border: 1px solid rgba(255,255,255,0.03);
+        min-height: 90px;
+    }
+    .fc .fc-daygrid-day-frame { padding: 6px; }
+    .fc .fc-daygrid-day-top { color: #9aa6b2; font-weight:600; }
+    .fc .fc-daygrid-day-number { color: #9aa6b2; }
+    .fc .fc-daygrid-event { background: rgba(255,255,255,0.06); color: #fff; border: none; }
+    .fc .fc-scrollgrid-section-liquid { background: transparent; }
+    /* make calendar occupy available width and look 'carded' */
+    #fullcalendar { background: transparent; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header con Título -->
+<div class="calendar-container">
+    <div class="calendar-header">
+        <div class="calendar-icon">
+            <i class="fas fa-calendar-alt"></i>
+        </div>
+        <div>
+            <h1 class="mb-1">Calendario de Actividades</h1>
+            <p class="mb-0 opacity-75">Organiza y visualiza todas las actividades académicas y proyectos</p>
+        </div>
+    </div>
+</div>
+
+<!-- Estadísticas -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="stats-card purple">
+            <h2 class="stats-number">{{ total_events }}</h2>
+            <p class="stats-label mb-0">Total de Eventos</p>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stats-card green">
+            <h2 class="stats-number">{{ upcoming_events }}</h2>
+            <p class="stats-label mb-0">Próximos Eventos</p>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stats-card pink">
+            <h2 class="stats-number">{{ overdue_events }}</h2>
+            <p class="stats-label mb-0">Eventos Recientes</p>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stats-card cyan">
+            <h2 class="stats-number">{{ today_events }}</h2>
+            <p class="stats-label mb-0">Eventos Hoy</p>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros y Leyenda -->
+<div class="filters-section">
+    <div class="row align-items-center">
+        <div class="col-md-6 mb-3 mb-md-0">
+            <h6 class="mb-3"><i class="fas fa-filter me-2"></i>Filtrar por tipo:</h6>
+            <div class="d-flex flex-wrap gap-2">
+                <label class="filter-checkbox">
+                    <input type="checkbox" checked data-filter="task">
+                    <span><i class="fas fa-tasks text-primary me-1"></i> Tareas</span>
+                </label>
+                <label class="filter-checkbox">
+                    <input type="checkbox" checked data-filter="meeting">
+                    <span><i class="fas fa-users text-danger me-1"></i> Reuniones</span>
+                </label>
+                <label class="filter-checkbox">
+                    <input type="checkbox" checked data-filter="deadline">
+                    <span><i class="fas fa-clock text-warning me-1"></i> Plazos</span>
+                </label>
+                <label class="filter-checkbox">
+                    <input type="checkbox" checked data-filter="project">
+                    <span><i class="fas fa-project-diagram text-success me-1"></i> Proyectos</span>
+                </label>
+            </div>
+        </div>
+        <div class="col-md-6 text-md-end">
+            <button id="btnOpenAddEvent" class="btn btn-primary" type="button">
+                <i class="fas fa-plus-circle me-2"></i>Agregar Evento
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Navegación del Calendario -->
+<div class="calendar-nav">
+    <div class="row align-items-center">
+        <div class="col-md-4">
+            <div class="d-flex gap-2">
+                <button class="btn-nav" id="prevMonth">
+                    <i class="fas fa-chevron-left me-2"></i>ANTERIOR
+                </button>
+                <button class="btn-nav" id="todayBtn">HOY</button>
+                <button class="btn-nav" id="nextMonth">
+                    SIGUIENTE<i class="fas fa-chevron-right ms-2"></i>
+                </button>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="month-title" id="currentMonth">noviembre de 2025</div>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="view-toggle">
+                <button class="active" id="viewMonth">
+                    <i class="fas fa-calendar me-1"></i>MES
+                </button>
+                <button id="viewWeek">
+                    <i class="fas fa-calendar-week me-1"></i>SEMANA
+                </button>
+                <button id="viewDay">
+                    <i class="fas fa-calendar-day me-1"></i>DÍA
+                </button>
+                <button id="viewAgenda">
+                    <i class="fas fa-list me-1"></i>AGENDA
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Calendario (FullCalendar) -->
+<div class="calendar-grid">
+    <div id="fullcalendar"></div>
+</div>
+
+<!-- Modal para Agregar/Editar Evento -->
+<div class="modal fade event-modal" id="addEventModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-calendar-plus me-2"></i>Agregar Nuevo Evento
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="eventForm">
+                    <div class="event-form-group">
+                        <label class="form-label fw-bold">Tipo de Evento</label>
+                        <script>window.CURRENT_USER_ROLE = "{{ current_user_role|default:''|escapejs }}";</script>
+                        <div class="event-type-selector">
+                            <div class="event-type-btn active" data-type="task" 
+                                 {% if not can_create_task %}aria-disabled="true" title="No autorizado para crear tareas" data-disabled="1"{% endif %}>
+                                <i class="fas fa-tasks"></i>
+                                <div>Tarea</div>
+                            </div>
+                            <div class="event-type-btn" data-type="meeting" 
+                                 {% if not can_create_meeting %}aria-disabled="true" title="No autorizado para crear reuniones" data-disabled="1"{% endif %}>
+                                <i class="fas fa-users"></i>
+                                <div>Reunión</div>
+                            </div>
+                            <div class="event-type-btn" data-type="deadline" 
+                                 {% if not can_create_deadline %}aria-disabled="true" title="No autorizado para crear plazos" data-disabled="1"{% endif %}>
+                                <i class="fas fa-clock"></i>
+                                <div>Plazo</div>
+                            </div>
+                            <div class="event-type-btn" data-type="agenda" 
+                                 {% if not can_create_agenda %}aria-disabled="true" title="No autorizado para agendar visitas" data-disabled="1"{% endif %}>
+                                <i class="fas fa-calendar-check"></i>
+                                <div>Agenda / Visita</div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="event_type" id="eventType" value="task">
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12 event-form-group">
+                            <label class="form-label fw-bold">Título del Evento *</label>
+                            <input type="text" class="form-control form-control-lg" name="title" required placeholder="Ej: Reunión de equipo, Entrega de proyecto...">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 event-form-group">
+                            <label class="form-label fw-bold">Fecha de Inicio *</label>
+                            <input type="date" class="form-control datepicker" name="start" required>
+                        </div>
+                        <div class="col-md-6 event-form-group">
+                            <label class="form-label fw-bold">Fecha de Fin</label>
+                            <input type="date" class="form-control datepicker" name="end">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 event-form-group">
+                            <label class="form-label fw-bold">Hora de Inicio</label>
+                            <input type="time" class="form-control" name="time">
+                        </div>
+                        <div class="col-md-6 event-form-group">
+                            <label class="form-label fw-bold">Hora de Fin</label>
+                            <input type="time" class="form-control" name="end_time">
+                        </div>
+                    </div>
+
+                    <div class="event-form-group">
+                        <label class="form-label fw-bold">Proyecto Relacionado</label>
+                        <select class="form-select select2" name="project">
+                            <option value="">Seleccionar proyecto...</option>
+                            {% for project in projects %}
+                            <option value="{{ project.id_proyecto }}">{{ project.nombre_proyecto }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="event-form-group">
+                        <label class="form-label fw-bold">Asignar a</label>
+                        <select class="form-select select2" name="assigned_to" multiple>
+                            {% for u in users %}
+                            <option value="{{ u.id }}" data-role="{{ u.role|default:'' }}">{{ u.display }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="event-form-group">
+                        <label class="form-label fw-bold">Descripción</label>
+                        <textarea class="form-control" name="description" rows="4" placeholder="Describe el evento..."></textarea>
+                    </div>
+
+                    <div class="event-form-group">
+                        <label class="form-label fw-bold">Ubicación</label>
+                        <input type="text" class="form-control" name="location" placeholder="Ej: Sala de reuniones, Oficina central...">
+                    </div>
+
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="all_day" id="allDay">
+                        <label class="form-check-label" for="allDay">
+                            Evento de todo el día
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="submit" form="eventForm" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Guardar Evento
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- FullCalendar CSS/JS -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const calendarEl = document.getElementById('fullcalendar');
+    const csrftoken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    // Prefer server-provided value but fall back to a global set on base.html
+    let CURRENT_USER_ROLE = (window.CURRENT_USER_ROLE || '{{ current_user_role|default:""|escapejs }}').toLowerCase();
+
+    // mappings must match backend
+    const allowedCreators = {
+        'task': ['jefe_proyecto','ministro','admin'],
+        'meeting': ['empresa','admin'],
+        'deadline': ['empresa','admin'],
+        'agenda': ['beneficiario','admin']
+    };
+    const allowedAssignees = {
+        'task': ['jefe_proyecto','ministro','admin'],
+        'meeting': ['empresa','admin'],
+        'deadline': ['empresa','admin'],
+        'agenda': ['beneficiario']
+    };
+
+    function filterEventTypeButtons() {
+        // disable event-type buttons the current user cannot create
+        document.querySelectorAll('.event-type-btn').forEach(btn => {
+            const t = btn.getAttribute('data-type');
+            const allowed = allowedCreators[t];
+            if (!allowed) return; // unknown type, leave
+            if (CURRENT_USER_ROLE && CURRENT_USER_ROLE !== 'admin' && !allowed.includes(CURRENT_USER_ROLE)) {
+                // hide or disable
+                btn.classList.add('disabled');
+                btn.setAttribute('aria-disabled','true');
+                btn.style.pointerEvents = 'none';
+                btn.style.opacity = '0.6';
+            } else {
+                btn.classList.remove('disabled');
+                btn.removeAttribute('aria-disabled');
+                btn.style.pointerEvents = '';
+                btn.style.opacity = '';
+            }
+        });
+        // if currently active button became disabled, choose the first allowed
+        const active = document.querySelector('.event-type-btn.active');
+        if (active && active.classList.contains('disabled')) {
+            const firstAllowed = Array.from(document.querySelectorAll('.event-type-btn')).find(b => !b.classList.contains('disabled'));
+            if (firstAllowed) {
+                document.querySelectorAll('.event-type-btn').forEach(b=>b.classList.remove('active'));
+                firstAllowed.classList.add('active');
+                const t = firstAllowed.getAttribute('data-type');
+                const input = document.getElementById('eventType'); if (input) input.value = t;
+                filterAssignedOptions(t);
+            }
+        }
+    }
+
+    function filterAssignedOptions(eventType) {
+        const allowed = allowedAssignees[eventType] || null;
+        const select = document.querySelector('select[name="assigned_to"]');
+        if (!select) return;
+        // show/hide options
+        Array.from(select.options).forEach(opt => {
+            const role = (opt.dataset.role || '').toLowerCase();
+            if (!allowed) {
+                opt.hidden = false;
+                opt.disabled = false;
+                return;
+            }
+            if (allowed.includes(role) || role === '') {
+                opt.hidden = false;
+                opt.disabled = false;
+            } else {
+                // hide/disable option
+                opt.hidden = true;
+                opt.disabled = true;
+                opt.selected = false;
+            }
+        });
+        // Trigger change so any widgets (select2 or similar) update once
+        try { select.dispatchEvent(new Event('change', { bubbles: true })); } catch(e){}
+    }
+    
+
+    // wire event type buttons to update hidden input and filter assigned list
+    document.querySelectorAll('.event-type-btn').forEach(btn => {
+        btn.addEventListener('click', function(){
+            document.querySelectorAll('.event-type-btn').forEach(b=>b.classList.remove('active'));
+            btn.classList.add('active');
+            const t = btn.getAttribute('data-type');
+            const input = document.getElementById('eventType');
+            if (input) input.value = t;
+            filterAssignedOptions(t);
+            // hide project select for agenda (visita a beneficiario)
+            const projectSelect = document.querySelector('select[name="project"]');
+            if (t === 'agenda' && projectSelect) projectSelect.parentElement.style.display = 'none';
+            else if (projectSelect) projectSelect.parentElement.style.display = '';
+        });
+    });
+
+    // initial UI filtering based on default eventType
+    (function(){
+        const defaultType = document.getElementById('eventType')?.value || 'task';
+        filterEventTypeButtons();
+        filterAssignedOptions(defaultType);
+    })();
+
+    async function fetchEvents() {
+        const res = await fetch('{% url "gestion:events_api" %}');
+        if (!res.ok) return [];
+        const j = await res.json();
+        return j.events || [];
+    }
+
+    function toFCEvents(apiEvents) {
+        return apiEvents.map(e => {
+            let start = e.start;
+            if (e.time) start = `${e.start}T${e.time}`;
+            return {
+                id: e.id,
+                title: e.title || 'Evento',
+                start: start,
+                end: e.end || null,
+                extendedProps: {
+                    project_id: e.project_id,
+                    type: e.type,
+                    time: e.time
+                }
+            };
+        });
+    }
+
+    // Robust modal handling using bootstrap.Modal when available.
+    const _modalEl = document.getElementById('addEventModal');
+    let _modalInstance = null;
+
+    function _cleanBackdrops(){
+        try { document.querySelectorAll('.modal-backdrop').forEach(b=>b.remove()); } catch(e){}
+        try { if (!document.querySelector('.modal.show')) document.body.classList.remove('modal-open'); } catch(e){}
+    }
+
+    function initModalOnce(){
+        if (!_modalEl) return;
+        if (_modalInstance) return;
+        try {
+            _cleanBackdrops();
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                _modalInstance = new bootstrap.Modal(_modalEl, { backdrop: true, keyboard: true });
+            }
+            try { _modalEl.style.zIndex = '2000'; } catch(e){}
+
+            _modalEl.addEventListener('shown.bs.modal', function(){
+                setTimeout(function(){ _cleanBackdrops(); window._modalLastAction = 'shown'; }, 30);
+            });
+
+            _modalEl.addEventListener('hidden.bs.modal', function(){
+                setTimeout(function(){ _cleanBackdrops(); window._modalLastAction = 'hidden'; }, 120);
+            });
+        } catch(e){ console.warn('initModalOnce error', e); }
+    }
+
+    function modalShow(){
+        initModalOnce();
+        _cleanBackdrops();
+        if (_modalInstance && typeof _modalInstance.show === 'function'){
+            try { _modalInstance.show(); return; } catch(e){ console.warn('modal show failed', e); }
+        }
+        if (_modalEl){
+            _modalEl.classList.add('show');
+            _modalEl.style.display = 'block';
+            try { document.body.classList.add('modal-open'); } catch(e){}
+            window._modalLastAction = 'shown';
+        }
+    }
+
+    function modalHide(){
+        try { initModalOnce(); } catch(e){}
+        if (_modalInstance && typeof _modalInstance.hide === 'function'){
+            try { _modalInstance.hide(); return; } catch(e){ console.warn('modal hide failed', e); }
+        }
+        if (_modalEl){
+            _modalEl.classList.remove('show');
+            _modalEl.style.display = 'none';
+            _cleanBackdrops();
+            window._modalLastAction = 'hidden';
+        }
+    }
+
+    try { window.modalShow = modalShow; window.modalHide = modalHide; } catch(e){}
+
+    const btnOpen = document.getElementById('btnOpenAddEvent');
+    if (btnOpen) {
+        btnOpen.addEventListener('click', function(e){ e.preventDefault(); try { modalShow(); } catch(ex){ console.error(ex); } });
+    }
+
+    // Ensure elements with data-bs-dismiss hide via modalHide to keep cleanup consistent
+    document.querySelectorAll('[data-bs-dismiss="modal"]').forEach(function(el){
+        el.addEventListener('click', function(e){ try { modalHide(); } catch(ex){ /* ignore */ } });
+    });
+
+    console.log('Initializing FullCalendar...');
+    fetchEvents().then(evts => {
+        const fcEvents = toFCEvents(evts);
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            height: 'auto',
+            selectable: true,
+            selectMirror: true,
+            navLinks: true,
+            events: fcEvents,
+            select: function(info) {
+                const dateStr = info.startStr.split('T')[0];
+                const startInput = document.querySelector('input[name="start"]');
+                const timeInput = document.querySelector('input[name="time"]');
+                const endInput = document.querySelector('input[name="end"]');
+                if (startInput) startInput.value = dateStr;
+                if (timeInput) timeInput.value = '09:00';
+                if (endInput) endInput.value = '';
+                modalShow();
+            },
+            eventClick: function(info) {
+                const ev = info.event;
+                alert(ev.title + '\n' + ev.start.toLocaleString());
+            }
+        });
+        calendar.render();
+
+        // form submit handling
+        const eventForm = document.getElementById('eventForm');
+        if (eventForm) {
+            eventForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const formData = new FormData(eventForm);
+                const payload = {
+                    title: formData.get('title'),
+                    start: formData.get('start'),
+                    end: formData.get('end') || null,
+                    time: formData.get('time') || null,
+                    type: document.getElementById('eventType')?.value || formData.get('event_type'),
+                    description: formData.get('description'),
+                    location: formData.get('location'),
+                    project: formData.get('project') || null,
+                    all_day: !!formData.get('all_day'),
+                    assigned_to: formData.getAll('assigned_to') || []
+                };
+
+                try {
+                    const resp = await fetch('{% url "gestion:events_api" %}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrftoken
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    const body = await resp.json().catch(() => ({}));
+                        if (resp.status === 200 || resp.status === 201) {
+                        const newEvt = body;
+                        const start = payload.time ? `${payload.start}T${payload.time}` : payload.start;
+                        calendar.addEvent({
+                            id: newEvt.id,
+                            title: payload.title,
+                            start: start,
+                            end: payload.end || null,
+                            extendedProps: { project_id: payload.project, type: payload.type }
+                        });
+                        modalHide();
+                        notify('Evento guardado', 'success');
+                    } else {
+                        const msg = body && body.error ? body.error : 'Error guardando evento';
+                        notify(msg, 'danger');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    notify('Error de red', 'danger');
+                }
+            });
+        }
+    }).catch(err => { console.error('Error cargando eventos', err); notify('No se pudieron cargar eventos','danger'); });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,1436 @@
+{% extends 'gestion/base.html' %}
+
+{% block title %}Postulaciones - Sistema de Gestión Habitacional{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-light btn-sm" onclick="history.back()" title="Volver">
+            <i class="bi bi-arrow-left"></i>
+        </button>
+        <h1 class="h2 mb-0"><i class="bi bi-file-earmark-text"></i> Gestión de Postulaciones</h1>
+    </div>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-outline-secondary" id="exportarExcel">
+                <i class="bi bi-file-earmark-excel"></i> Exportar
+            </button>
+            <button type="button" class="btn btn-outline-secondary" id="imprimirReporte">
+                <i class="bi bi-printer"></i> Imprimir
+            </button>
+        </div>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#nuevaPostulacionModal">
+            <i class="bi bi-plus-circle"></i> Nueva Postulación
+        </button>
+    </div>
+</div>
+
+<!-- Filtros mejorados con más opciones -->
+<div class="card mb-4 shadow-sm">
+    <div class="card-header bg-light">
+        <h6 class="mb-0"><i class="bi bi-funnel"></i> Filtros de Búsqueda</h6>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3" id="filtrosForm">
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Estado</label>
+                <select name="estado" class="form-select">
+                    <option value="">Todos los estados</option>
+                    {% for estado in estados %}
+                        <option value="{{ estado }}" {% if request.GET.estado == estado %}selected{% endif %}>
+                            {{ estado }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Buscar Beneficiario</label>
+                <input type="text" class="form-control" name="beneficiario" 
+                       placeholder="Nombre o RUT" value="{{ request.GET.beneficiario }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Proyecto</label>
+                <select name="proyecto" class="form-select">
+                    <option value="">Todos los proyectos</option>
+                    {% for proyecto in proyectos %}
+                        <option value="{{ proyecto.id_proyecto }}" 
+                                {% if request.GET.proyecto == proyecto.id_proyecto|stringformat:"s" %}selected{% endif %}>
+                            {{ proyecto.nombre_proyecto }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Rango de Puntaje</label>
+                <select name="puntaje" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="alto" {% if request.GET.puntaje == 'alto' %}selected{% endif %}>Alto (>70)</option>
+                    <option value="medio" {% if request.GET.puntaje == 'medio' %}selected{% endif %}>Medio (40-70)</option>
+                    <option value="bajo" {% if request.GET.puntaje == 'bajo' %}selected{% endif %}>Bajo (<40)</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Fecha Desde</label>
+                <input type="date" class="form-control" name="fecha_desde" value="{{ request.GET.fecha_desde }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Fecha Hasta</label>
+                <input type="date" class="form-control" name="fecha_hasta" value="{{ request.GET.fecha_hasta }}">
+            </div>
+            <div class="col-md-6 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1">
+                    <i class="bi bi-search"></i> Buscar
+                </button>
+                <button type="button" class="btn btn-outline-secondary" id="limpiarFiltros">
+                    <i class="bi bi-x-circle"></i> Limpiar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Estadísticas mejoradas con animación -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 hover-lift">
+            <div class="card-body text-center">
+                <div class="mb-2">
+                    <i class="bi bi-file-earmark-text text-primary fs-1"></i>
+                </div>
+                <h3 class="mb-0 text-primary fw-bold counter" data-target="{{ stats.total|default:0 }}">0</h3>
+                <p class="text-muted mb-0 small">Total Postulaciones</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 hover-lift">
+            <div class="card-body text-center">
+                <div class="mb-2">
+                    <i class="bi bi-check-circle text-success fs-1"></i>
+                </div>
+                <h3 class="mb-0 text-success fw-bold counter" data-target="{{ stats.aprobadas|default:0 }}">0</h3>
+                <p class="text-muted mb-0 small">Aprobadas</p>
+                <small class="text-success">{{ stats.porcentaje_aprobadas|default:0 }}%</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 hover-lift">
+            <div class="card-body text-center">
+                <div class="mb-2">
+                    <i class="bi bi-hourglass-split text-warning fs-1"></i>
+                </div>
+                <h3 class="mb-0 text-warning fw-bold counter" data-target="{{ stats.en_revision|default:0 }}">0</h3>
+                <p class="text-muted mb-0 small">En Revisión</p>
+                <small class="text-warning">{{ stats.porcentaje_revision|default:0 }}%</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 hover-lift">
+            <div class="card-body text-center">
+                <div class="mb-2">
+                    <i class="bi bi-x-circle text-danger fs-1"></i>
+                </div>
+                <h3 class="mb-0 text-danger fw-bold counter" data-target="{{ stats.rechazadas|default:0 }}">0</h3>
+                <p class="text-muted mb-0 small">Rechazadas</p>
+                <small class="text-danger">{{ stats.porcentaje_rechazadas|default:0 }}%</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla mejorada con acciones rápidas -->
+<div class="card shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-list-ul"></i> Lista de Postulaciones</h5>
+        <div class="d-flex gap-2 align-items-center">
+            <span class="text-muted small">{{ postulaciones.count }} resultados</span>
+            <div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-outline-secondary active" data-view="table">
+                    <i class="bi bi-table"></i>
+                </button>
+                <button type="button" class="btn btn-outline-secondary" data-view="cards">
+                    <i class="bi bi-grid-3x3-gap"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div id="tableView">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="postulacionesTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-center">
+                                <input type="checkbox" id="selectAll" class="form-check-input">
+                            </th>
+                            <th>ID</th>
+                            <th>Beneficiario</th>
+                            <th>RUT</th>
+                            <th>Proyecto</th>
+                            <th>Fecha Postulación</th>
+                            <th class="text-center">Puntaje</th>
+                            <th class="text-center">Estado</th>
+                            <th>Fecha Asignación</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for postulacion in postulaciones %}
+                        <tr data-id="{{ postulacion.id_postulacion }}" class="postulacion-row">
+                            <td class="text-center">
+                                <input type="checkbox" class="form-check-input select-row" 
+                                       value="{{ postulacion.id_postulacion }}">
+                            </td>
+                            <td><span class="badge bg-light text-dark">{{ postulacion.id_postulacion }}</span></td>
+                            <td>
+                                {% if postulacion.id_beneficiario %}
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle me-2">
+                                            {{ postulacion.id_beneficiario.nombre|first }}{{ postulacion.id_beneficiario.apellidos|first }}
+                                        </div>
+                                        <a href="{% url 'gestion:beneficiario_detail' postulacion.id_beneficiario.id_beneficiario %}" 
+                                           class="text-decoration-none fw-semibold">
+                                            {{ postulacion.id_beneficiario.nombre }} {{ postulacion.id_beneficiario.apellidos }}
+                                        </a>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if postulacion.id_beneficiario %}
+                                    <code class="text-dark">{{ postulacion.id_beneficiario.rut }}</code>
+                                {% else %}
+                                    <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if postulacion.id_proyecto %}
+                                    <a href="{% url 'gestion:proyecto_detail' postulacion.id_proyecto.id_proyecto %}"
+                                       class="text-decoration-none" title="{{ postulacion.id_proyecto.nombre_proyecto }}">
+                                        <i class="bi bi-building"></i> {{ postulacion.id_proyecto.nombre_proyecto|truncatewords:4 }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if postulacion.fecha_postulacion %}
+                                    <span class="text-nowrap">
+                                        <i class="bi bi-calendar3"></i> {{ postulacion.fecha_postulacion|date:"d/m/Y" }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if postulacion.puntaje_asignado %}
+                                    {% if postulacion.puntaje_asignado >= 70 %}
+                                        <span class="badge bg-success fs-6">{{ postulacion.puntaje_asignado }}</span>
+                                    {% elif postulacion.puntaje_asignado >= 40 %}
+                                        <span class="badge bg-warning fs-6">{{ postulacion.puntaje_asignado }}</span>
+                                    {% else %}
+                                        <span class="badge bg-danger fs-6">{{ postulacion.puntaje_asignado }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-secondary">Pendiente</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if postulacion.estado_postulacion == 'Aprobada' %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle"></i> Aprobada
+                                    </span>
+                                {% elif postulacion.estado_postulacion == 'Rechazada' %}
+                                    <span class="badge bg-danger">
+                                        <i class="bi bi-x-circle"></i> Rechazada
+                                    </span>
+                                {% elif postulacion.estado_postulacion == 'En Revisión' %}
+                                    <span class="badge bg-warning">
+                                        <i class="bi bi-hourglass-split"></i> En Revisión
+                                    </span>
+                                {% elif postulacion.estado_postulacion == 'Pendiente' %}
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-clock"></i> Pendiente
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-info">{{ postulacion.estado_postulacion|default:"Sin Estado" }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if postulacion.fecha_asignacion %}
+                                    <span class="text-nowrap">
+                                        <i class="bi bi-calendar-check"></i> {{ postulacion.fecha_asignacion|date:"d/m/Y" }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn btn-outline-info btn-ver-detalle" 
+                                            title="Ver detalle"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#detalleModal"
+                                            data-id="{{ postulacion.id_postulacion }}"
+                                            data-estado="{{ postulacion.estado_postulacion }}"
+                                            data-nombre="{{ postulacion.id_beneficiario.nombre|default:'' }} {{ postulacion.id_beneficiario.apellidos|default:'' }}"
+                                            data-rut="{{ postulacion.id_beneficiario.rut|default:'' }}"
+                                            data-email="{{ postulacion.id_beneficiario.email|default:'' }}"
+                                            data-telefono="{{ postulacion.id_beneficiario.telefono|default:'' }}"
+                                            data-puntaje="{{ postulacion.id_beneficiario.puntaje_socioeconomico|default:'' }}"
+                                            data-proyecto="{{ postulacion.id_proyecto.nombre_proyecto|default:'' }}"
+                                            data-municipio="{{ postulacion.id_proyecto.id_municipio.nombre_municipio|default:'' }}"
+                                            data-tipo="{{ postulacion.id_proyecto.tipo_vivienda|default:'' }}"
+                                            data-estadoproy="{{ postulacion.id_proyecto.estado_proyecto|default:'' }}"
+                                            data-fechapost="{{ postulacion.fecha_postulacion|date:'d/m/Y'|default:'' }}"
+                                            data-puntajeasig="{{ postulacion.puntaje_asignado|default:'' }}"
+                                            data-fechaasig="{{ postulacion.fecha_asignacion|date:'d/m/Y'|default:'' }}"
+                                            data-observaciones="{{ postulacion.observaciones|default:'' }}"
+                                            data-documentos="{{ postulacion.documentos_adjuntos|default:'' }}">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-warning" title="Editar"
+                                            onclick="window.location.href='/admin/gestion/postulaciones/{{ postulacion.id_postulacion }}/change/'">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    {% if postulacion.estado_postulacion == 'Pendiente' or postulacion.estado_postulacion == 'En Revisión' %}
+                                        <button type="button" class="btn btn-outline-success" title="Aprobar"
+                                                data-action="approve" data-id="{{ postulacion.id_postulacion }}">
+                                            <i class="bi bi-check-circle"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger" title="Rechazar"
+                                                data-action="reject" data-id="{{ postulacion.id_postulacion }}">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="10" class="text-center py-5">
+                                <div class="text-muted">
+                                    <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                                    <p class="mb-0">No se encontraron postulaciones con los filtros aplicados</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+ <!-- Vista de tarjetas (oculta por defecto) -->
+        <div id="cardsView" class="d-none p-3">
+            <div class="row g-3">
+                {% for postulacion in postulaciones %}
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm hover-lift">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <h6 class="card-title mb-0">
+                                    {% if postulacion.id_beneficiario %}
+                                        {{ postulacion.id_beneficiario.nombre }} {{ postulacion.id_beneficiario.apellidos }}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </h6>
+                                {% if postulacion.estado_postulacion == 'Aprobada' %}
+                                    <span class="badge bg-success">Aprobada</span>
+                                {% elif postulacion.estado_postulacion == 'Rechazada' %}
+                                    <span class="badge bg-danger">Rechazada</span>
+                                {% elif postulacion.estado_postulacion == 'En Revisión' %}
+                                    <span class="badge bg-warning">En Revisión</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Pendiente</span>
+                                {% endif %}
+                            </div>
+                            <p class="card-text small text-muted mb-2">
+                                <i class="bi bi-building"></i> 
+                                {% if postulacion.id_proyecto %}
+                                    {{ postulacion.id_proyecto.nombre_proyecto|truncatewords:5 }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </p>
+                            <p class="card-text small mb-2">
+                                <strong>Puntaje:</strong> 
+                                {% if postulacion.puntaje_asignado %}
+                                    <span class="badge bg-primary">{{ postulacion.puntaje_asignado }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Pendiente</span>
+                                {% endif %}
+                            </p>
+                            <p class="card-text small text-muted mb-3">
+                                <i class="bi bi-calendar3"></i> 
+                                {% if postulacion.fecha_postulacion %}
+                                    {{ postulacion.fecha_postulacion|date:"d/m/Y" }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </p>
+                            <button type="button" class="btn btn-sm btn-outline-primary w-100 btn-ver-detalle"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#detalleModal"
+                                    data-id="{{ postulacion.id_postulacion }}"
+                                    data-estado="{{ postulacion.estado_postulacion }}"
+                                    data-nombre="{{ postulacion.id_beneficiario.nombre|default:'' }} {{ postulacion.id_beneficiario.apellidos|default:'' }}"
+                                    data-rut="{{ postulacion.id_beneficiario.rut|default:'' }}"
+                                    data-email="{{ postulacion.id_beneficiario.email|default:'' }}"
+                                    data-telefono="{{ postulacion.id_beneficiario.telefono|default:'' }}"
+                                    data-puntaje="{{ postulacion.id_beneficiario.puntaje_socioeconomico|default:'' }}"
+                                    data-proyecto="{{ postulacion.id_proyecto.nombre_proyecto|default:'' }}"
+                                    data-municipio="{{ postulacion.id_proyecto.id_municipio.nombre_municipio|default:'' }}"
+                                    data-tipo="{{ postulacion.id_proyecto.tipo_vivienda|default:'' }}"
+                                    data-estadoproy="{{ postulacion.id_proyecto.estado_proyecto|default:'' }}"
+                                    data-fechapost="{{ postulacion.fecha_postulacion|date:'d/m/Y'|default:'' }}"
+                                    data-puntajeasig="{{ postulacion.puntaje_asignado|default:'' }}"
+                                    data-fechaasig="{{ postulacion.fecha_asignacion|date:'d/m/Y'|default:'' }}"
+                                    data-observaciones="{{ postulacion.observaciones|default:'' }}"
+                                    data-documentos="{{ postulacion.documentos_adjuntos|default:'' }}">
+                                <i class="bi bi-eye"></i> Ver Detalle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Paginación -->
+{% if postulaciones.has_other_pages %}
+<nav aria-label="Navegación de postulaciones" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if postulaciones.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page=1{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}">Primera</a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ postulaciones.previous_page_number }}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}">Anterior</a>
+        </li>
+        {% endif %}
+
+        <li class="page-item active">
+            <span class="page-link">Página {{ postulaciones.number }} de {{ postulaciones.paginator.num_pages }}</span>
+        </li>
+
+        {% if postulaciones.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ postulaciones.next_page_number }}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}">Siguiente</a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ postulaciones.paginator.num_pages }}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}">Última</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+
+    <!-- Modal Nueva Postulación -->
+<!-- Desactivamos backdrop para evitar overlay gris que bloquea la UI -->
+<div class="modal fade" id="nuevaPostulacionModal" tabindex="-1" data-bs-backdrop="false" data-bs-keyboard="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content modern-modal">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-plus-circle-fill"></i> Nueva Postulación
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="nuevaPostulacionForm">
+                    {% csrf_token %}
+                    <div class="row g-4">
+                        <!-- Sección: Beneficiario -->
+                        <div class="col-12">
+                            <div class="form-section">
+                                <h6 class="section-title">
+                                    <i class="bi bi-person-circle"></i> Seleccionar Beneficiario
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-md-12">
+                                        <label class="form-label">
+                                            <i class="bi bi-search"></i> Buscar Beneficiario
+                                        </label>
+                                        <select class="form-select" name="id_beneficiario" id="beneficiarioSelect" required>
+                                            <option value="">Seleccione un beneficiario...</option>
+                                            {% comment %} Este select se llenará dinámicamente o desde el contexto {% endcomment %}
+                                        </select>
+                                        <small class="form-text">Seleccione el beneficiario que realizará la postulación</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Sección: Proyecto -->
+                        <div class="col-12">
+                            <div class="form-section">
+                                <h6 class="section-title">
+                                    <i class="bi bi-building"></i> Seleccionar Proyecto
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-md-12">
+                                        <label class="form-label">
+                                            <i class="bi bi-search"></i> Proyecto Habitacional
+                                        </label>
+                                        <select class="form-select" name="id_proyecto" id="proyectoSelect" required>
+                                            <option value="">Seleccione un proyecto...</option>
+                                            {% for proyecto in proyectos %}
+                                                <option value="{{ proyecto.id_proyecto }}" 
+                                                        data-municipio="{{ proyecto.id_municipio.nombre_municipio }}"
+                                                        data-tipo="{{ proyecto.tipo_vivienda }}"
+                                                        data-viviendas="{{ proyecto.numero_viviendas }}">
+                                                    {{ proyecto.nombre_proyecto }} - {{ proyecto.id_municipio.nombre_municipio }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                        <small class="form-text">Proyecto al que se postula</small>
+                                    </div>
+                                    
+                                    <!-- Preview del proyecto seleccionado -->
+                                    <div class="col-md-12" id="proyectoPreview" style="display: none;">
+                                        <div class="proyecto-preview-card">
+                                            <h6>Vista Previa del Proyecto</h6>
+                                            <div class="preview-info">
+                                                <div class="preview-item">
+                                                    <i class="bi bi-geo-alt"></i>
+                                                    <span id="previewMunicipio"></span>
+                                                </div>
+                                                <div class="preview-item">
+                                                    <i class="bi bi-house-door"></i>
+                                                    <span id="previewTipo"></span>
+                                                </div>
+                                                <div class="preview-item">
+                                                    <i class="bi bi-houses"></i>
+                                                    <span id="previewViviendas"></span> viviendas
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Sección: Información Adicional -->
+                        <div class="col-12">
+                            <div class="form-section">
+                                <h6 class="section-title">
+                                    <i class="bi bi-clipboard-data"></i> Información Adicional
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">
+                                            <i class="bi bi-calendar"></i> Fecha de Postulación
+                                        </label>
+                                        <input type="date" class="form-control" name="fecha_postulacion" id="fechaPostulacion" required>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label">
+                                            <i class="bi bi-star"></i> Puntaje Inicial (Opcional)
+                                        </label>
+                                        <input type="number" class="form-control" name="puntaje_asignado" placeholder="0-100" min="0" max="100">
+                                        <small class="form-text">Puede dejarse en blanco para asignar después</small>
+                                    </div>
+                                    
+                                    <div class="col-md-12">
+                                        <label class="form-label">
+                                            <i class="bi bi-chat-left-text"></i> Observaciones
+                                        </label>
+                                        <textarea class="form-control" name="observaciones" rows="3" placeholder="Ingrese cualquier observación relevante..."></textarea>
+                                    </div>
+                                    
+                                    <div class="col-md-12">
+                                        <label class="form-label">
+                                            <i class="bi bi-paperclip"></i> Documentos Adjuntos (Opcional)
+                                        </label>
+                                        <input type="file" class="form-control" name="documentos_adjuntos" multiple>
+                                        <small class="form-text">Puede adjuntar documentos de respaldo</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" onclick="guardarPostulacion()">
+                    <span class="btn-text">
+                        <i class="bi bi-check-circle"></i> Crear Postulación
+                    </span>
+                    <span class="btn-loading" style="display: none;">
+                        <span class="spinner"></span> Guardando...
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+
+<style>
+.stat-card-post {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card-post::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+}
+
+.stat-card-post.primary::before { background: linear-gradient(180deg, #6366f1 0%, #8b5cf6 100%); }
+.stat-card-post.success::before { background: linear-gradient(180deg, #10b981 0%, #34d399 100%); }
+.stat-card-post.warning::before { background: linear-gradient(180deg, #f59e0b 0%, #fbbf24 100%); }
+.stat-card-post.danger::before { background: linear-gradient(180deg, #ef4444 0%, #f87171 100%); }
+
+.stat-card-post:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+.stat-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.stat-card-post.primary .stat-icon {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+    color: #6366f1;
+}
+
+.stat-card-post.success .stat-icon {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(52, 211, 153, 0.1) 100%);
+    color: #10b981;
+}
+
+.stat-card-post.warning .stat-icon {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(251, 191, 36, 0.1) 100%);
+    color: #f59e0b;
+}
+
+.stat-card-post.danger .stat-icon {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(248, 113, 113, 0.1) 100%);
+    color: #ef4444;
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #1f2937;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    color: #6c757d;
+    font-size: 0.95rem;
+    margin-bottom: 0.3rem;
+}
+
+.stat-trend {
+    color: #10b981;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.status-success {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.status-danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.status-warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+}
+
+.status-secondary {
+    background: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+}
+
+.status-badge i {
+    font-size: 0.6rem;
+}
+
+.modern-modal .modal-header {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: white;
+    border: none;
+    padding: 1.5rem 2rem;
+}
+
+.form-section {
+    background: rgba(99, 102, 241, 0.05);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 2px solid rgba(99, 102, 241, 0.1);
+}
+
+.section-title {
+    color: #6366f1;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.proyecto-preview-card {
+    background: white;
+    padding: 1rem;
+    border-radius: 10px;
+    border: 2px solid rgba(99, 102, 241, 0.2);
+}
+
+.preview-info {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 0.8rem;
+}
+
+.preview-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #6c757d;
+}
+
+.preview-item i {
+    color: #6366f1;
+}
+
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.postulacion-card {
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.postulacion-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+.card-status {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+}
+
+.card-status.success {
+    background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+}
+
+.card-status.danger {
+    background: linear-gradient(90deg, #ef4444 0%, #f87171 100%);
+}
+
+.card-status.warning {
+    background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%);
+}
+
+.card-header-custom {
+    text-align: center;
+    padding: 2rem 1.5rem 1rem;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+}
+
+.avatar-large {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 2.5rem;
+    margin: 0 auto 1rem;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.card-body-custom {
+    padding: 1.5rem;
+}
+
+.info-row {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.8rem 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.info-row i {
+    color: #6366f1;
+    font-size: 1.1rem;
+}
+
+.card-footer-custom {
+    padding: 1rem 1.5rem;
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Variables globales
+let selectedRows = new Set();
+
+// Inicialización al cargar la página
+document.addEventListener('DOMContentLoaded', function(){
+    console.log('Postulaciones cargadas: {{ postulaciones.count }}');
+
+    // Inicializar contadores animados
+    initCounters();
+
+    // Inicializar event listeners
+    initEventListeners();
+
+    // Inicializar tooltips de Bootstrap
+    initTooltips();
+
+    // Inicializar toast de notificaciones
+    initToast();
+});
+
+// Función para animar contadores
+function initCounters() {
+    const counters = document.querySelectorAll('.counter');
+    counters.forEach(counter => {
+        const target = parseInt(counter.getAttribute('data-target'));
+        let current = 0;
+        const increment = target / 50;
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= target) {
+                counter.textContent = target;
+                clearInterval(timer);
+            } else {
+                counter.textContent = Math.floor(current);
+            }
+        }, 20);
+    });
+}
+
+// Inicializar tooltips
+function initTooltips() {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+}
+
+// Inicializar event listeners
+function initEventListeners() {
+    // Selector de todas las filas
+    const selectAll = document.getElementById('selectAll');
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.select-row');
+            checkboxes.forEach(cb => {
+                cb.checked = this.checked;
+                if (this.checked) {
+                    selectedRows.add(cb.value);
+                } else {
+                    selectedRows.delete(cb.value);
+                }
+            });
+        });
+    }
+    
+    // Selectores individuales
+    document.querySelectorAll('.select-row').forEach(cb => {
+        cb.addEventListener('change', function() {
+            if (this.checked) {
+                selectedRows.add(this.value);
+            } else {
+                selectedRows.delete(this.value);
+            }
+        });
+    });
+    
+    // Cambio de vista (tabla/tarjetas)
+    document.querySelectorAll('[data-view]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const view = this.getAttribute('data-view');
+            document.querySelectorAll('[data-view]').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            if (view === 'table') {
+                document.getElementById('tableView').classList.remove('d-none');
+                document.getElementById('cardsView').classList.add('d-none');
+            } else {
+                document.getElementById('tableView').classList.add('d-none');
+                document.getElementById('cardsView').classList.remove('d-none');
+            }
+        });
+    });
+    
+    // Limpiar filtros
+    const limpiarBtn = document.getElementById('limpiarFiltros');
+    if (limpiarBtn) {
+        limpiarBtn.addEventListener('click', function() {
+            window.location.href = window.location.pathname;
+        });
+    }
+    
+    // Exportar a Excel
+    const exportarBtn = document.getElementById('exportarExcel');
+    if (exportarBtn) {
+        exportarBtn.addEventListener('click', exportarExcel);
+    }
+    
+    // Imprimir reporte
+    const imprimirBtn = document.getElementById('imprimirReporte');
+    if (imprimirBtn) {
+        imprimirBtn.addEventListener('click', function() {
+            window.print();
+        });
+    }
+}
+
+// Rellenar modal cuando se abre
+const detalleModalEl = document.getElementById('detalleModal');
+if (detalleModalEl) {
+    detalleModalEl.addEventListener('show.bs.modal', function (event) {
+        const trigger = event.relatedTarget;
+        if (!trigger) return;
+        
+        const id = trigger.getAttribute('data-id') || '';
+        const estado = trigger.getAttribute('data-estado') || '';
+        
+        // Configurar botones de acción
+        const aprobarBtn = document.getElementById('modalAprobarBtn');
+        const rechazarBtn = document.getElementById('modalRechazarBtn');
+        
+        aprobarBtn.setAttribute('data-id', id);
+        rechazarBtn.setAttribute('data-id', id);
+        
+        // Mostrar/ocultar botones según estado
+        if (estado === 'Aprobada' || estado === 'Rechazada') {
+            aprobarBtn.style.display = 'none';
+            rechazarBtn.style.display = 'none';
+        } else {
+            aprobarBtn.style.display = 'inline-block';
+            rechazarBtn.style.display = 'inline-block';
+        }
+        
+        // Mapear campos
+        document.getElementById('det_id').textContent = id;
+        document.getElementById('det_nombre').textContent = trigger.getAttribute('data-nombre') || 'N/A';
+        document.getElementById('det_rut').innerHTML = `<code>${trigger.getAttribute('data-rut') || 'N/A'}</code>`;
+        document.getElementById('det_email').textContent = trigger.getAttribute('data-email') || 'N/A';
+        document.getElementById('det_telefono').textContent = trigger.getAttribute('data-telefono') || 'N/A';
+        
+        const puntaje = trigger.getAttribute('data-puntaje');
+        if (puntaje) {
+            const badgeClass = puntaje >= 70 ? 'success' : puntaje >= 40 ? 'warning' : 'danger';
+            document.getElementById('det_puntaje').innerHTML = `<span class="badge bg-${badgeClass}">${puntaje}</span>`;
+        } else {
+            document.getElementById('det_puntaje').textContent = 'N/A';
+        }
+        
+        document.getElementById('det_proyecto').textContent = trigger.getAttribute('data-proyecto') || 'N/A';
+        document.getElementById('det_municipio').textContent = trigger.getAttribute('data-municipio') || 'N/A';
+        document.getElementById('det_tipo').textContent = trigger.getAttribute('data-tipo') || 'N/A';
+        document.getElementById('det_estadoproy').textContent = trigger.getAttribute('data-estadoproy') || 'N/A';
+        document.getElementById('det_fechapost').textContent = trigger.getAttribute('data-fechapost') || 'N/A';
+        
+        const puntajeAsig = trigger.getAttribute('data-puntajeasig');
+        if (puntajeAsig) {
+            const badgeClass = puntajeAsig >= 70 ? 'success' : puntajeAsig >= 40 ? 'warning' : 'danger';
+            document.getElementById('det_puntajeasig').innerHTML = `<span class="badge bg-${badgeClass}">${puntajeAsig}</span>`;
+        } else {
+            document.getElementById('det_puntajeasig').innerHTML = '<span class="badge bg-secondary">Pendiente</span>';
+        }
+        
+        document.getElementById('det_fechaasig').textContent = trigger.getAttribute('data-fechaasig') || '-';
+        
+        // Estado con badge
+        let estadoBadge = '';
+        switch(estado) {
+            case 'Aprobada':
+                estadoBadge = '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Aprobada</span>';
+                break;
+            case 'Rechazada':
+                estadoBadge = '<span class="badge bg-danger"><i class="bi bi-x-circle"></i> Rechazada</span>';
+                break;
+            case 'En Revisión':
+                estadoBadge = '<span class="badge bg-warning"><i class="bi bi-hourglass-split"></i> En Revisión</span>';
+                break;
+            case 'Pendiente':
+                estadoBadge = '<span class="badge bg-secondary"><i class="bi bi-clock"></i> Pendiente</span>';
+                break;
+            default:
+                estadoBadge = `<span class="badge bg-info">${estado || 'Sin Estado'}</span>`;
+        }
+        document.getElementById('det_estado').innerHTML = estadoBadge;
+        
+        const observaciones = trigger.getAttribute('data-observaciones');
+        document.getElementById('det_observaciones').textContent = observaciones || 'Sin observaciones';
+        
+        const documentos = trigger.getAttribute('data-documentos');
+        if (documentos && documentos !== 'None') {
+            document.getElementById('det_documentos').innerHTML = `<a href="${documentos}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i> Descargar</a>`;
+        } else {
+            document.getElementById('det_documentos').textContent = 'Sin documentos adjuntos';
+        }
+    });
+}
+
+// Handler global para botones approve/reject (tabla)
+document.addEventListener('click', async function(e){
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    
+    const action = btn.getAttribute('data-action');
+    const id = btn.getAttribute('data-id');
+    if (!id) return;
+    
+    // Confirmación
+    const confirmMsg = action === 'approve' 
+        ? '¿Está seguro de aprobar esta postulación?' 
+        : '¿Está seguro de rechazar esta postulación?';
+    
+    if (!confirm(confirmMsg)) return;
+    
+    await handleAction(action, id, btn);
+});
+
+// Handlers en modal
+document.getElementById('modalAprobarBtn')?.addEventListener('click', async function(e){
+    const id = e.target.getAttribute('data-id');
+    if (confirm('¿Está seguro de aprobar esta postulación?')) {
+        await handleAction('approve', id, null, true);
+    }
+});
+
+document.getElementById('modalRechazarBtn')?.addEventListener('click', async function(e){
+    const id = e.target.getAttribute('data-id');
+    if (confirm('¿Está seguro de rechazar esta postulación?')) {
+        await handleAction('reject', id, null, true);
+    }
+});
+
+// Función principal para manejar acciones
+async function handleAction(action, id, btn=null, fromModal=false){
+    const url = `/api/postulaciones/${id}/`;
+    
+    try {
+        showLoader();
+        
+        if (action === 'approve'){
+            await apiPatch(url, { 
+                estado_postulacion: 'Aprobada', 
+                fecha_asignacion: new Date().toISOString().slice(0,10) 
+            });
+            notify('Postulación aprobada exitosamente', 'success');
+        } else if (action === 'reject'){
+            await apiPatch(url, { estado_postulacion: 'Rechazada' });
+            notify('Postulación rechazada', 'warning');
+        }
+
+        // Actualizar UI: fila y modal
+        updateRowUI(id, action);
+
+        if (fromModal){
+            // Cerrar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('detalleModal'));
+            if (modal) modal.hide();
+        }
+        
+        // Recargar página después de 1 segundo para reflejar cambios
+        setTimeout(() => location.reload(), 1000);
+        
+    } catch(err){
+        console.error(err);
+        notify('Error al actualizar la postulación', 'danger');
+    } finally {
+        hideLoader();
+    }
+}
+
+// Actualizar UI de la fila
+function updateRowUI(id, action) {
+    const row = document.querySelector(`tr[data-id="${id}"]`);
+    if (!row) return;
+    
+    const estadoCell = row.querySelector('td:nth-child(8)');
+    if (estadoCell){
+        const newEstado = action === 'approve' 
+            ? '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Aprobada</span>'
+            : '<span class="badge bg-danger"><i class="bi bi-x-circle"></i> Rechazada</span>';
+        estadoCell.innerHTML = newEstado;
+    }
+    
+    // Remover botones de acción
+    const actionBtns = row.querySelectorAll('button[data-action]');
+    actionBtns.forEach(b => b.remove());
+}
+
+// Función para inicializar toast
+function initToast() {
+    // Crear el contenedor de toast si no existe
+    if (!document.getElementById('notificationToast')) {
+        const toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        toastContainer.innerHTML = `
+            <div id="notificationToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-header">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    <strong class="me-auto">Notificación</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body">
+                    Mensaje de notificación aquí.
+                </div>
+            </div>
+        `;
+        document.body.appendChild(toastContainer);
+    }
+}
+
+// Función de notificación mejorada con Toast
+function notify(message, type = 'info') {
+    const toastEl = document.getElementById('notificationToast');
+    if (!toastEl) {
+        console.error('Toast element not found');
+        return;
+    }
+
+    const toastBody = toastEl.querySelector('.toast-body');
+    const toastHeader = toastEl.querySelector('.toast-header');
+
+    if (!toastBody || !toastHeader) {
+        console.error('Toast body or header not found');
+        return;
+    }
+
+    // Configurar colores según tipo
+    const colors = {
+        success: { bg: 'bg-success', icon: 'bi-check-circle-fill', text: 'text-white' },
+        danger: { bg: 'bg-danger', icon: 'bi-x-circle-fill', text: 'text-white' },
+        warning: { bg: 'bg-warning', icon: 'bi-exclamation-triangle-fill', text: 'text-dark' },
+        info: { bg: 'bg-info', icon: 'bi-info-circle-fill', text: 'text-white' }
+    };
+
+    const color = colors[type] || colors.info;
+
+    toastHeader.className = `toast-header ${color.bg} ${color.text}`;
+    toastHeader.querySelector('i').className = `bi ${color.icon} me-2`;
+    toastBody.textContent = message;
+
+    const toast = new bootstrap.Toast(toastEl);
+    toast.show();
+}
+
+// Loader visual
+function showLoader() {
+    if (!document.getElementById('globalLoader')) {
+        const loader = document.createElement('div');
+        loader.id = 'globalLoader';
+        loader.innerHTML = `
+            <div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" 
+                 style="background: rgba(0,0,0,0.5); z-index: 9999;">
+                <div class="spinner-border text-light" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(loader);
+    }
+}
+
+function hideLoader() {
+    const loader = document.getElementById('globalLoader');
+    if (loader) loader.remove();
+}
+
+// Función para exportar a Excel (simulada)
+function exportarExcel() {
+    notify('Preparando exportación...', 'info');
+    
+    // Aquí puedes implementar la lógica real de exportación
+    // Por ejemplo, usando una librería como SheetJS o haciendo una petición al backend
+    setTimeout(() => {
+        notify('Funcionalidad en desarrollo', 'warning');
+    }, 1000);
+}
+
+// Funciones de API (asumiendo que apiPatch está definida en base.html o en otro archivo)
+async function apiPatch(url, data) {
+    const response = await fetch(url, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(data)
+    });
+    
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+}
+
+// Función para obtener CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Cleanup overlays that can block UI (loader or stray modal backdrops)
+function cleanupOverlays() {
+    try {
+        // Remove global loader if present
+        const loader = document.getElementById('globalLoader');
+        if (loader) loader.remove();
+
+        // Remove any stray modal backdrops
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+
+        // Ensure body doesn't keep modal-open
+        document.body.classList.remove('modal-open');
+
+        // Re-enable pointer events on main container just in case
+        document.body.style.pointerEvents = '';
+    } catch (e) {
+        console.warn('cleanupOverlays error', e);
+    }
+}
+
+// Guardar nueva postulación (envío POST a la API)
+async function guardarPostulacion() {
+    const form = document.getElementById('nuevaPostulacionForm');
+    if (!form) return;
+
+    // Validación simple
+    const beneficiario = document.getElementById('beneficiarioSelect').value;
+    const proyecto = document.getElementById('proyectoSelect').value;
+    const fecha = document.getElementById('fechaPostulacion').value;
+
+    if (!beneficiario || !proyecto || !fecha) {
+        notify('Por favor completa Beneficiario, Proyecto y Fecha', 'warning');
+        return;
+    }
+
+    // Obtener CSRF token del formulario
+    const csrfToken = form.querySelector('input[name="csrfmiddlewaretoken"]')?.value;
+    if (!csrfToken) {
+        notify('Error: No se pudo obtener el token CSRF', 'danger');
+        return;
+    }
+
+    // Construir FormData para soportar archivos opcionales
+    const fd = new FormData();
+    fd.append('id_beneficiario', beneficiario);
+    fd.append('id_proyecto', proyecto);
+    fd.append('fecha_postulacion', fecha);
+
+    const puntaje = form.querySelector('input[name="puntaje_asignado"]').value;
+    if (puntaje) fd.append('puntaje_asignado', puntaje);
+
+    const observ = form.querySelector('textarea[name="observaciones"]').value;
+    if (observ) fd.append('observaciones', observ);
+
+    // Archivos: el campo de modelo `documentos_adjuntos` es texto en la API.
+    // Si el usuario sube archivos aquí, los omitimos y avisamos. Para soporte
+    // de archivos se necesita un endpoint específico (o campo FileField en el modelo).
+    const files = form.querySelector('input[type="file"]').files;
+    if (files && files.length) {
+        notify('Adjuntos detectados pero no están habilitados para subida via UI; se omitirán', 'warning');
+    }
+
+    try {
+        showLoader();
+        const resp = await fetch('/api/postulaciones/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            body: fd,
+            credentials: 'same-origin'
+        });
+
+        if (!resp.ok) {
+            const text = await resp.text();
+            let msg = `Error ${resp.status}`;
+            try { const j = JSON.parse(text); msg = j.detail || JSON.stringify(j); } catch(e) {}
+            throw new Error(msg);
+        }
+
+        const data = await resp.json();
+        notify('Postulación creada correctamente', 'success');
+
+    // Cerrar modal
+    const modalEl = document.getElementById('nuevaPostulacionModal');
+    const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+    modal.hide();
+
+    // Limpieza de overlays residuales (previene pantalla gris bloqueada)
+    cleanupOverlays();
+
+    // Cargar lista actualizada
+    setTimeout(() => window.location.reload(), 800);
+
+    } catch (err) {
+        console.error('guardarPostulacion error', err);
+        notify('No se pudo crear la postulación: ' + (err.message || err), 'danger');
+    } finally {
+        hideLoader();
+    }
+}
+
+// Rellenar select de beneficiarios cuando se abre el modal
+async function populateBeneficiarios() {
+    const sel = document.getElementById('beneficiarioSelect');
+    if (!sel) return;
+    // Si ya está cargado, no volver a cargar
+    if (sel.dataset.loaded === '1') return;
+
+    try {
+        const resp = await fetch('/api/beneficiarios/?page_size=1000', { credentials: 'same-origin' });
+        if (!resp.ok) throw new Error('No se pudo obtener beneficiarios');
+        const json = await resp.json();
+
+        // API paginada: results
+        const list = json.results || json;
+        list.forEach(b => {
+            const opt = document.createElement('option');
+            opt.value = b.id_beneficiario || b.id;
+            opt.textContent = (b.nombre || '') + ' ' + (b.apellidos || '') + (b.rut ? ' — ' + b.rut : '');
+            sel.appendChild(opt);
+        });
+        sel.dataset.loaded = '1';
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+// Mostrar preview del proyecto seleccionado
+function handleProyectoChange() {
+    const sel = document.getElementById('proyectoSelect');
+    const preview = document.getElementById('proyectoPreview');
+    if (!sel || !preview) return;
+    const opt = sel.options[sel.selectedIndex];
+    if (!opt || !opt.value) {
+        preview.style.display = 'none';
+        return;
+    }
+    document.getElementById('previewMunicipio').textContent = opt.dataset.municipio || '';
+    document.getElementById('previewTipo').textContent = opt.dataset.tipo || '';
+    document.getElementById('previewViviendas').textContent = opt.dataset.viviendas || '';
+    preview.style.display = 'block';
+}
+
+// Cuando se abre el modal, poblar selects y setear fecha por defecto
+const nuevaModalEl = document.getElementById('nuevaPostulacionModal');
+if (nuevaModalEl) {
+    nuevaModalEl.addEventListener('show.bs.modal', function(e) {
+        // Poblar beneficiarios
+        populateBeneficiarios();
+
+        // Setear fecha por defecto a hoy si no hay valor
+        const fecha = document.getElementById('fechaPostulacion');
+        if (fecha && !fecha.value) {
+            const hoy = new Date();
+            fecha.value = hoy.toISOString().slice(0,10);
+        }
+
+        // Conexion change de proyecto para preview
+        const proyectoSel = document.getElementById('proyectoSelect');
+        if (proyectoSel) proyectoSel.addEventListener('change', handleProyectoChange);
+    });
+    // Al ocultar modal, limpiar backdrops residuales
+    nuevaModalEl.addEventListener('hidden.bs.modal', function(e) {
+        cleanupOverlays();
+    });
+}
+</script>
+{% endblock %}

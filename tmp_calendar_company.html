@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="Y8Xwty8NEadnsZXXDTOp8YRZlQbfyOgCI4s1XIu5qfoXCf6tW4zRT38KKbOiVOCh">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="referrer" content="same-origin">
+    <title>Calendario - iConstruction</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+     <style>
+    :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #06b6d4;
+            --dark: #1f2937;
+            --light: #f9fafb;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        /* Animated background */
+        .bg-animated {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.1;
+            /* No capturar eventos del ratón para que overlays/modal puedan recibir clicks */
+            pointer-events: none;
+        }
+        
+        .bg-animated canvas {
+            width: 100%;
+            height: 100%;
+            /* el canvas no debe capturar punteros */
+            pointer-events: none;
+            display: block;
+        }
+
+        /* Asegurar que los modales estén por encima de otros elementos personalizados */
+        .modal {
+            z-index: 2000 !important;
+        }
+        .modal-backdrop {
+            z-index: 1500 !important;
+        }
+        
+        /* Navbar moderna */
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.4rem;
+            color: var(--primary) !important;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .navbar-brand i {
+            font-size: 1.8rem;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .nav-link {
+            color: var(--dark) !important;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+            padding: 0.5rem 1rem !important;
+        }
+        
+        .nav-link:hover {
+            color: var(--primary) !important;
+            transform: translateY(-2px);
+        }
+        
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: var(--primary);
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
+        
+        .nav-link:hover::after {
+            width: 80%;
+        }
+        
+        /* Sidebar moderna */
+        .sidebar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            min-height: calc(100vh - 70px);
+            border-right: 1px solid rgba(0, 0, 0, 0.05);
+            position: sticky;
+            top: 70px;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.05);
+        }
+        
+        .sidebar .nav-link {
+            margin: 0.3rem 0.8rem;
+            padding: 0.9rem 1.2rem !important;
+            border-radius: 12px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-left: none;
+        }
+        
+        .sidebar .nav-link:hover {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            transform: translateX(5px);
+        }
+        
+        .sidebar .nav-link.active {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white !important;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        .sidebar .nav-link i {
+            font-size: 1.2rem;
+            margin-right: 0.8rem;
+        }
+        
+        /* Contenido principal */
+        .content-wrapper {
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Cards mejoradas */
+        .card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: white;
+            overflow: hidden;
+        }
+        
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+            border-bottom: 2px solid rgba(99, 102, 241, 0.1);
+            padding: 1.2rem 1.5rem;
+        }
+        
+        /* Stat cards mejoradas */
+        .stat-card {
+            position: relative;
+            overflow: hidden;
+            color: white;
+            border-radius: 20px;
+            padding: 1.5rem;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+        
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        }
+        
+        .stat-card.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .stat-card.success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+        }
+        
+        .stat-card.warning {
+            background: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%);
+        }
+        
+        .stat-card.info {
+            background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%);
+        }
+        
+        .stat-card .icon {
+            font-size: 3.5rem;
+            opacity: 0.3;
+            transition: all 0.4s ease;
+        }
+        
+        .stat-card:hover .icon {
+            opacity: 0.5;
+            transform: scale(1.2) rotate(10deg);
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0.5rem 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Botones mejorados */
+        .btn {
+            border-radius: 10px;
+            padding: 0.6rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(99, 102, 241, 0.4);
+        }
+        
+        /* Tabla mejorada */
+        .table {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .table thead th {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
+            color: var(--primary);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            border: none;
+            padding: 1rem;
+        }
+        
+        .table tbody tr {
+            transition: all 0.3s ease;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .table tbody tr:hover {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+            transform: scale(1.01);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* Badges mejorados */
+        .badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            letter-spacing: 0.3px;
+        }
+        
+        /* Formularios mejorados */
+        .form-control, .form-select {
+            border-radius: 10px;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            padding: 0.7rem 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        /* Alertas mejoradas */
+        .alert {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            animation: slideInDown 0.5s ease;
+        }
+        
+        @keyframes slideInDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        /* Modal mejorado */
+        .modal-content {
+            border-radius: 20px;
+            border: none;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .modal-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            border-radius: 20px 20px 0 0;
+            border: none;
+        }
+        
+        /* Animaciones de carga */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Scrollbar personalizado */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 5px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: relative;
+                top: 0;
+            }
+            
+            .stat-number {
+                font-size: 2rem;
+            }
+        }
+    </style>
+    
+<style>
+    .calendar-container {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 1rem;
+        padding: 2rem;
+        color: white;
+        margin-bottom: 2rem;
+    }
+
+    .calendar-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .calendar-icon {
+        width: 60px;
+        height: 60px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+    }
+
+    .stats-card {
+        border-radius: 1rem;
+        border: none;
+        padding: 1.5rem;
+        height: 100%;
+        transition: all 0.3s ease;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    }
+
+    .stats-card.purple { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+    .stats-card.green { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; }
+    .stats-card.pink { background: linear-gradient(135deg, #ee9ca7 0%, #ffdde1 100%); color: #333; }
+    .stats-card.cyan { background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%); color: white; }
+
+    .stats-number {
+        font-size: 3rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .stats-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        margin-top: 0.5rem;
+    }
+
+    .calendar-nav {
+        background: #2c3e50;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .calendar-nav button {
+        background: #34495e;
+        border: none;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .calendar-nav button:hover {
+        background: #4a5f7f;
+        transform: scale(1.05);
+    }
+
+    .calendar-nav button.active {
+        background: #667eea;
+    }
+
+    .month-title {
+        text-align: center;
+        color: white;
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+
+    .view-toggle {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .view-toggle button {
+        background: #34495e;
+        border: none;
+        color: white;
+        padding: 0.5rem 1.5rem;
+        border-radius: 0.5rem;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+    }
+
+    .view-toggle button.active {
+        background: #667eea;
+    }
+
+    .calendar-grid {
+        background: #1e2a38;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        overflow: hidden;
+    }
+
+    .calendar-weekdays {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .weekday {
+        text-align: center;
+        font-weight: 600;
+        color: #a8b2c1;
+        padding: 1rem;
+        background: #2c3e50;
+        border-radius: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .calendar-days {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 0.5rem;
+    }
+
+    .calendar-day {
+        background: #2c3e50;
+        border-radius: 0.75rem;
+        min-height: 120px;
+        padding: 0.75rem;
+        color: white;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        border: 2px solid transparent;
+    }
+
+    .calendar-day:hover {
+        background: #34495e;
+        border-color: #667eea;
+        transform: scale(1.02);
+    }
+
+    .calendar-day.other-month {
+        opacity: 0.4;
+    }
+
+    .calendar-day.today {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-color: #fff;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .day-number {
+        font-weight: 600;
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .day-events {
+        margin-top: 0.5rem;
+    }
+
+    .event-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 4px;
+    }
+
+    .event-item {
+        background: rgba(255,255,255,0.1);
+        border-radius: 0.375rem;
+        padding: 0.25rem 0.5rem;
+        margin-bottom: 0.25rem;
+        font-size: 0.75rem;
+        border-left: 3px solid;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .event-item.event-task { border-left-color: #3498db; }
+    .event-item.event-meeting { border-left-color: #e74c3c; }
+    .event-item.event-deadline { border-left-color: #f39c12; }
+    .event-item.event-project { border-left-color: #2ecc71; }
+
+    .filters-section {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .filter-checkbox {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .filter-checkbox:hover {
+        background: #e9ecef;
+    }
+
+    .filter-checkbox input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
+    .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-right: 1.5rem;
+        font-size: 0.9rem;
+    }
+
+    .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+    }
+
+    /* Modal de evento */
+    .event-modal .modal-content {
+        border-radius: 1rem;
+        border: none;
+    }
+
+    .event-modal .modal-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 1rem 1rem 0 0;
+        padding: 1.5rem;
+    }
+
+    .event-form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .event-type-selector {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
+    }
+
+    .event-type-btn {
+        padding: 1rem;
+        border: 2px solid #dee2e6;
+        border-radius: 0.75rem;
+        background: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+    }
+
+    .event-type-btn:hover {
+        border-color: #667eea;
+        background: #f8f9fa;
+    }
+
+    .event-type-btn.active {
+        border-color: #667eea;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .event-type-btn i {
+        font-size: 1.5rem;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+
+    @media (max-width: 768px) {
+        .calendar-days {
+            gap: 0.25rem;
+        }
+        
+        .calendar-day {
+            min-height: 80px;
+            padding: 0.5rem;
+        }
+        
+        .stats-number {
+            font-size: 2rem;
+        }
+    }
+    /* Fix FullCalendar display and hide static nav duplicates */
+    .calendar-grid #fullcalendar {
+        min-height: 600px;
+        background: #ffffff;
+        color: #222;
+        border-radius: 0.75rem;
+        padding: 1rem;
+    }
+
+    /* Hide the static month title and nav buttons to let FullCalendar render its toolbar */
+    .calendar-nav .month-title,
+    .calendar-nav .view-toggle,
+    .calendar-nav .btn-nav {
+        display: none !important;
+    }
+</style>
+
+</head>
+<body>
+<!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-house-fill"></i> Sistema Gestión Habitacional
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    
+                    <!-- Enlaces globales: Notificaciones y Configuración -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="/notifications/"><i class="bi bi-bell-fill"></i> Notificaciones</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/settings/"><i class="bi bi-gear-fill"></i> Configuración</a>
+                    </li>
+                    
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userMenu" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i> companyuser
+                            
+                            <span class="badge bg-secondary">empresa</span>
+                            
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
+                            <li><a class="dropdown-item" href="/profile/"><i class="bi bi-person"></i> Mi Perfil</a></li>
+                            <li>
+                                <form method="post" action="/logout/" style="display:inline">
+                                    <input type="hidden" name="csrfmiddlewaretoken" value="Y8Xwty8NEadnsZXXDTOp8YRZlQbfyOgCI4s1XIu5qfoXCf6tW4zRT38KKbOiVOCh">
+                                    <button type="submit" class="dropdown-item"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
+                    
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar (implementación solicitada, convertida a URLs Django) -->
+            <nav class="col-md-2 d-md-block sidebar p-0">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link " href="/">
+                                <i class="bi bi-speedometer2"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link " href="/beneficiarios/">
+                                <i class="bi bi-people-fill"></i> Beneficiarios
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link " href="/proyectos/">
+                                <i class="bi bi-building"></i> Proyectos
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="/calendar/">
+                                <i class="bi bi-calendar-event"></i> Calendario
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link " href="/postulaciones/">
+                                <i class="bi bi-file-earmark-text-fill"></i> Postulaciones
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link " href="/reportes/">
+                                <i class="bi bi-bar-chart-fill"></i> Reportes
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-10 ms-sm-auto px-md-4 content-wrapper">
+                
+                
+                
+<!-- Header con Título -->
+<div class="calendar-container">
+    <div class="calendar-header">
+        <div class="calendar-icon">
+            <i class="fas fa-calendar-alt"></i>
+        </div>
+        <div>
+            <h1 class="mb-1">Calendario de Actividades</h1>
+            <p class="mb-0 opacity-75">Organiza y visualiza todas las actividades académicas y proyectos</p>
+        </div>
+    </div>
+</div>
+
+<!-- Estadísticas -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="stats-card purple">
+            <h2 class="stats-number">3</h2>
+            <p class="stats-label mb-0">Total de Eventos</p>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stats-card green">
+            <h2 class="stats-number">3</h2>
+            <p class="stats-label mb-0">Próximos Eventos</p>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stats-card pink">
+            <h2 class="stats-number">0</h2>
+            <p class="stats-label mb-0">Eventos Recientes</p>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stats-card cyan">
+            <h2 class="stats-number">0</h2>
+            <p class="stats-label mb-0">Eventos Hoy</p>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros y Leyenda -->
+<div class="filters-section">
+    <div class="row align-items-center">
+        <div class="col-md-6 mb-3 mb-md-0">
+            <h6 class="mb-3"><i class="fas fa-filter me-2"></i>Filtrar por tipo:</h6>
+            <div class="d-flex flex-wrap gap-2">
+                <label class="filter-checkbox">
+                    <input type="checkbox" checked data-filter="task">
+                    <span><i class="fas fa-tasks text-primary me-1"></i> Tareas</span>
+                </label>
+                <label class="filter-checkbox">
+                    <input type="checkbox" checked data-filter="meeting">
+                    <span><i class="fas fa-users text-danger me-1"></i> Reuniones</span>
+                </label>
+                <label class="filter-checkbox">
+                    <input type="checkbox" checked data-filter="deadline">
+                    <span><i class="fas fa-clock text-warning me-1"></i> Plazos</span>
+                </label>
+                <label class="filter-checkbox">
+                    <input type="checkbox" checked data-filter="project">
+                    <span><i class="fas fa-project-diagram text-success me-1"></i> Proyectos</span>
+                </label>
+            </div>
+        </div>
+        <div class="col-md-6 text-md-end">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEventModal">
+                <i class="fas fa-plus-circle me-2"></i>Agregar Evento
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Navegación del Calendario -->
+<div class="calendar-nav">
+    <div class="row align-items-center">
+        <div class="col-md-4">
+            <div class="d-flex gap-2">
+                <button class="btn-nav" id="prevMonth">
+                    <i class="fas fa-chevron-left me-2"></i>ANTERIOR
+                </button>
+                <button class="btn-nav" id="todayBtn">HOY</button>
+                <button class="btn-nav" id="nextMonth">
+                    SIGUIENTE<i class="fas fa-chevron-right ms-2"></i>
+                </button>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="month-title" id="currentMonth">noviembre de 2025</div>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="view-toggle">
+                <button class="active" id="viewMonth">
+                    <i class="fas fa-calendar me-1"></i>MES
+                </button>
+                <button id="viewWeek">
+                    <i class="fas fa-calendar-week me-1"></i>SEMANA
+                </button>
+                <button id="viewDay">
+                    <i class="fas fa-calendar-day me-1"></i>DÍA
+                </button>
+                <button id="viewAgenda">
+                    <i class="fas fa-list me-1"></i>AGENDA
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Calendario (FullCalendar) -->
+<div class="calendar-grid">
+    <div id="fullcalendar"></div>
+</div>
+
+<!-- Modal para Agregar/Editar Evento -->
+<div class="modal fade event-modal" id="addEventModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-calendar-plus me-2"></i>Agregar Nuevo Evento
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="eventForm">
+                    <div class="event-form-group">
+                        <label class="form-label fw-bold">Tipo de Evento</label>
+                        <div class="event-type-selector">
+                            <div class="event-type-btn active" data-type="task">
+                                <i class="fas fa-tasks"></i>
+                                <div>Tarea</div>
+                            </div>
+                            <div class="event-type-btn" data-type="meeting">
+                                <i class="fas fa-users"></i>
+                                <div>Reunión</div>
+                            </div>
+                            <div class="event-type-btn" data-type="deadline">
+                                <i class="fas fa-clock"></i>
+                                <div>Plazo</div>
+                            </div>
+                            <div class="event-type-btn" data-type="project">
+                                <i class="fas fa-project-diagram"></i>
+                                <div>Proyecto</div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="event_type" id="eventType" value="task">
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12 event-form-group">
+                            <label class="form-label fw-bold">Título del Evento *</label>
+                            <input type="text" class="form-control form-control-lg" name="title" required placeholder="Ej: Reunión de equipo, Entrega de proyecto...">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 event-form-group">
+                            <label class="form-label fw-bold">Fecha de Inicio *</label>
+                            <input type="date" class="form-control datepicker" name="start" required>
+                        </div>
+                        <div class="col-md-6 event-form-group">
+                            <label class="form-label fw-bold">Fecha de Fin</label>
+                            <input type="date" class="form-control datepicker" name="end">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 event-form-group">
+                            <label class="form-label fw-bold">Hora de Inicio</label>
+                            <input type="time" class="form-control" name="time">
+                        </div>
+                        <div class="col-md-6 event-form-group">
+                            <label class="form-label fw-bold">Hora de Fin</label>
+                            <input type="time" class="form-control" name="end_time">
+                        </div>
+                    </div>
+
+                    <div class="event-form-group">
+                        <label class="form-label fw-bold">Proyecto Relacionado</label>
+                        <select class="form-select select2" name="project">
+                            <option value="">Seleccionar proyecto...</option>
+                            
+                            <option value="2">BUIN</option>
+                            
+                            <option value="1">Noviciado hogar</option>
+                            
+                            <option value="6">ProyectoTest</option>
+                            
+                            <option value="5">lampa hogar</option>
+                            
+                            <option value="3">pudahuel local</option>
+                            
+                            <option value="4">pudahuel localw</option>
+                            
+                        </select>
+                    </div>
+
+                    <div class="event-form-group">
+                        <label class="form-label fw-bold">Asignar a</label>
+                        <select class="form-select select2" name="assigned_to" multiple>
+                            
+                            
+                            <option value="4" data-role="usuario">Fabiana   Azocar Gonzales</option>
+                            
+                            
+                            
+                            <option value="5" data-role="empresa">vivienda</option>
+                            
+                            
+                            
+                            <option value="3" data-role="usuario">Nicolas  Lizama Villaroel</option>
+                            
+                            
+                            
+                            <option value="1" data-role="usuario">Ruben Azocar Sanchez</option>
+                            
+                            
+                            
+                            <option value="6" data-role="admin">admin</option>
+                            
+                            
+                            
+                            <option value="2" data-role="usuario">ariel</option>
+                            
+                            
+                            
+                            <option value="9" data-role="empresa">companyuser</option>
+                            
+                            
+                            
+                            <option value="7" data-role="usuario">testadmin</option>
+                            
+                            
+                            
+                            <option value="8" data-role="usuario">testuser</option>
+                            
+                            
+                        </select>
+                    </div>
+
+                    <div class="event-form-group">
+                        <label class="form-label fw-bold">Descripción</label>
+                        <textarea class="form-control" name="description" rows="4" placeholder="Describe el evento..."></textarea>
+                    </div>
+
+                    <div class="event-form-group">
+                        <label class="form-label fw-bold">Ubicación</label>
+                        <input type="text" class="form-control" name="location" placeholder="Ej: Sala de reuniones, Oficina central...">
+                    </div>
+
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="all_day" id="allDay">
+                        <label class="form-check-label" for="allDay">
+                            Evento de todo el día
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="submit" form="eventForm" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Guardar Evento
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <script>
+        // Helper CSRF para fetch en Django
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Obtener el token CSRF primero del meta tag, luego de las cookies
+        const csrftoken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || getCookie('csrftoken');
+        
+        // Verificar que tenemos un token CSRF válido
+        if (!csrftoken) {
+            console.error('CSRF token not found: https://docs.djangoproject.com/en/dev/ref/csrf/');
+        }
+
+        async function apiFetch(url, method = 'GET', body = null) {
+            const headers = { 'Accept': 'application/json' };
+            if (method !== 'GET' && method !== 'HEAD') {
+                headers['X-CSRFToken'] = csrftoken;
+                headers['Content-Type'] = 'application/json';
+            }
+            const opts = { method, headers, credentials: 'same-origin' };
+            if (body) opts.body = JSON.stringify(body);
+            const res = await fetch(url, opts);
+            if (!res.ok) {
+                const text = await res.text();
+                let j = null;
+                try { j = JSON.parse(text); } catch(e) {}
+                throw { status: res.status, body: j || text };
+            }
+            // Try parse json
+            const txt = await res.text();
+            try { return JSON.parse(txt); } catch(e) { return txt; }
+        }
+
+        // Notificación simple
+        function notify(msg, type = 'info'){
+            const div = document.createElement('div');
+            div.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            div.style.right = '20px';
+            div.style.top = '20px';
+            div.style.zIndex = 1050;
+            div.innerHTML = msg + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+            document.body.appendChild(div);
+            setTimeout(()=>{ div.classList.remove('show'); div.remove(); }, 4000);
+        }
+
+        // Convenience wrappers
+        async function apiPatch(url, payload){ return apiFetch(url, 'PATCH', payload); }
+        async function apiPost(url, payload){ return apiFetch(url, 'POST', payload); }
+        async function apiDelete(url){ return apiFetch(url, 'DELETE'); }
+    </script>
+
+        <script>
+            // Expose current user role to client JS by reading the navbar badge (fallback when template context missing)
+            window.CURRENT_USER_ROLE = (function(){
+                try {
+                    const b = document.querySelector('#userMenu .badge') || document.querySelector('.navbar .badge');
+                    return b && b.textContent ? b.textContent.trim().toLowerCase() : '';
+                } catch(e){ return ''; }
+            })();
+        </script>
+
+    
+<!-- FullCalendar CSS/JS -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const calendarEl = document.getElementById('fullcalendar');
+    const csrftoken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    // Prefer server-provided value but fall back to a global set on base.html
+    let CURRENT_USER_ROLE = (window.CURRENT_USER_ROLE || 'empresa').toLowerCase();
+
+    // mappings must match backend
+    const allowedCreators = {
+        'task': ['jefe_proyecto','ministro','admin'],
+        'meeting': ['empresa','admin'],
+        'deadline': ['empresa','admin'],
+        'agenda': ['beneficiario','admin']
+    };
+    const allowedAssignees = {
+        'task': ['jefe_proyecto','ministro','admin'],
+        'meeting': ['empresa','admin'],
+        'deadline': ['empresa','admin'],
+        'agenda': ['beneficiario']
+    };
+
+    function filterEventTypeButtons() {
+        // disable event-type buttons the current user cannot create
+        document.querySelectorAll('.event-type-btn').forEach(btn => {
+            const t = btn.getAttribute('data-type');
+            const allowed = allowedCreators[t];
+            if (!allowed) return; // unknown type, leave
+            if (CURRENT_USER_ROLE && CURRENT_USER_ROLE !== 'admin' && !allowed.includes(CURRENT_USER_ROLE)) {
+                // hide or disable
+                btn.classList.add('disabled');
+                btn.setAttribute('aria-disabled','true');
+                btn.style.pointerEvents = 'none';
+                btn.style.opacity = '0.6';
+            } else {
+                btn.classList.remove('disabled');
+                btn.removeAttribute('aria-disabled');
+                btn.style.pointerEvents = '';
+                btn.style.opacity = '';
+            }
+        });
+        // if currently active button became disabled, choose the first allowed
+        const active = document.querySelector('.event-type-btn.active');
+        if (active && active.classList.contains('disabled')) {
+            const firstAllowed = Array.from(document.querySelectorAll('.event-type-btn')).find(b => !b.classList.contains('disabled'));
+            if (firstAllowed) {
+                document.querySelectorAll('.event-type-btn').forEach(b=>b.classList.remove('active'));
+                firstAllowed.classList.add('active');
+                const t = firstAllowed.getAttribute('data-type');
+                const input = document.getElementById('eventType'); if (input) input.value = t;
+                filterAssignedOptions(t);
+            }
+        }
+    }
+
+    function filterAssignedOptions(eventType) {
+        const allowed = allowedAssignees[eventType] || null;
+        const select = document.querySelector('select[name="assigned_to"]');
+        if (!select) return;
+        // show/hide options
+        Array.from(select.options).forEach(opt => {
+            const role = (opt.dataset.role || '').toLowerCase();
+            if (!allowed) {
+                opt.hidden = false;
+                opt.disabled = false;
+                return;
+            }
+            if (allowed.includes(role) || role === '') {
+                opt.hidden = false;
+                opt.disabled = false;
+            } else {
+                // hide/disable option
+                opt.hidden = true;
+                opt.disabled = true;
+                opt.selected = false;
+            }
+        });
+    }
+
+    // wire event type buttons to update hidden input and filter assigned list
+    document.querySelectorAll('.event-type-btn').forEach(btn => {
+        btn.addEventListener('click', function(){
+            document.querySelectorAll('.event-type-btn').forEach(b=>b.classList.remove('active'));
+            btn.classList.add('active');
+            const t = btn.getAttribute('data-type');
+            const input = document.getElementById('eventType');
+            if (input) input.value = t;
+            filterAssignedOptions(t);
+            // hide project select for agenda (visita a beneficiario)
+            const projectSelect = document.querySelector('select[name="project"]');
+            if (t === 'agenda' && projectSelect) projectSelect.parentElement.style.display = 'none';
+            else if (projectSelect) projectSelect.parentElement.style.display = '';
+        });
+    });
+
+    // initial UI filtering based on default eventType
+    (function(){
+        const defaultType = document.getElementById('eventType')?.value || 'task';
+        filterEventTypeButtons();
+        filterAssignedOptions(defaultType);
+    })();
+
+    async function fetchEvents() {
+        const res = await fetch('/api/events/');
+        if (!res.ok) return [];
+        const j = await res.json();
+        return j.events || [];
+    }
+
+    function toFCEvents(apiEvents) {
+        return apiEvents.map(e => {
+            let start = e.start;
+            if (e.time) start = `${e.start}T${e.time}`;
+            return {
+                id: e.id,
+                title: e.title || 'Evento',
+                start: start,
+                end: e.end || null,
+                extendedProps: {
+                    project_id: e.project_id,
+                    type: e.type,
+                    time: e.time
+                }
+            };
+        });
+    }
+
+    function openModal() {
+        const modalEl = document.getElementById('addEventModal');
+        return new bootstrap.Modal(modalEl);
+    }
+
+    console.log('Initializing FullCalendar...');
+    fetchEvents().then(evts => {
+        const fcEvents = toFCEvents(evts);
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            height: 'auto',
+            selectable: true,
+            selectMirror: true,
+            navLinks: true,
+            events: fcEvents,
+            select: function(info) {
+                const dateStr = info.startStr.split('T')[0];
+                const startInput = document.querySelector('input[name="start"]');
+                const timeInput = document.querySelector('input[name="time"]');
+                const endInput = document.querySelector('input[name="end"]');
+                if (startInput) startInput.value = dateStr;
+                if (timeInput) timeInput.value = '09:00';
+                if (endInput) endInput.value = '';
+                openModal().show();
+            },
+            eventClick: function(info) {
+                const ev = info.event;
+                alert(ev.title + '\n' + ev.start.toLocaleString());
+            }
+        });
+        calendar.render();
+
+        // form submit handling
+        const eventForm = document.getElementById('eventForm');
+        if (eventForm) {
+            eventForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const formData = new FormData(eventForm);
+                const payload = {
+                    title: formData.get('title'),
+                    start: formData.get('start'),
+                    end: formData.get('end') || null,
+                    time: formData.get('time') || null,
+                    type: document.getElementById('eventType')?.value || formData.get('event_type'),
+                    description: formData.get('description'),
+                    location: formData.get('location'),
+                    project: formData.get('project') || null,
+                    all_day: !!formData.get('all_day'),
+                    assigned_to: formData.getAll('assigned_to') || []
+                };
+
+                try {
+                    const resp = await fetch('/api/events/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrftoken
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    const body = await resp.json().catch(() => ({}));
+                    if (resp.status === 200 || resp.status === 201) {
+                        const newEvt = body;
+                        const start = payload.time ? `${payload.start}T${payload.time}` : payload.start;
+                        calendar.addEvent({
+                            id: newEvt.id,
+                            title: payload.title,
+                            start: start,
+                            end: payload.end || null,
+                            extendedProps: { project_id: payload.project, type: payload.type }
+                        });
+                        openModal().hide();
+                        notify('Evento guardado', 'success');
+                    } else {
+                        const msg = body && body.error ? body.error : 'Error guardando evento';
+                        notify(msg, 'danger');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    notify('Error de red', 'danger');
+                }
+            });
+        }
+    }).catch(err => { console.error('Error cargando eventos', err); notify('No se pudieron cargar eventos','danger'); });
+});
+</script>
+
+</body>
+</html>

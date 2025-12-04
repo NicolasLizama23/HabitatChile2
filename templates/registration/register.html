@@ -1,0 +1,963 @@
+{% extends 'registration/base_auth.html' %}
+
+{% block title %}Registro - Sistema de Gestión Habitacional{% endblock %}
+
+{% block content %}
+<!-- Fondo animado -->
+<div class="register-container">
+    <div class="register-wrapper">
+        <!-- Panel izquierdo - Información -->
+        <div class="info-panel">
+            <div class="info-content">
+                <div class="logo-section">
+                    <i class="bi bi-house-heart-fill"></i>
+                    <h2>Sistema de Gestión Habitacional</h2>
+                </div>
+                
+                <div class="features">
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <i class="bi bi-shield-check"></i>
+                        </div>
+                        <div class="feature-text">
+                            <h4>Seguro y Confiable</h4>
+                            <p>Tus datos están protegidos con encriptación de última generación</p>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <i class="bi bi-lightning-fill"></i>
+                        </div>
+                        <div class="feature-text">
+                            <h4>Rápido y Eficiente</h4>
+                            <p>Gestiona tus postulaciones en minutos, no en días</p>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <i class="bi bi-headset"></i>
+                        </div>
+                        <div class="feature-text">
+                            <h4>Soporte 24/7</h4>
+                            <p>Estamos aquí para ayudarte cuando lo necesites</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stats">
+                    <div class="stat-item">
+                        <h3>1,248+</h3>
+                        <p>Beneficiarios</p>
+                    </div>
+                    <div class="stat-item">
+                        <h3>42</h3>
+                        <p>Proyectos Activos</p>
+                    </div>
+                    <div class="stat-item">
+                        <h3>856</h3>
+                        <p>Viviendas Entregadas</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Panel derecho - Formulario -->
+        <div class="form-panel">
+            <div class="form-container">
+                <div class="form-header">
+                    <h1>Crear Cuenta</h1>
+                    <p>Únete a nuestra comunidad y accede a beneficios habitacionales</p>
+                </div>
+                
+                <!-- Selector de tipo de usuario -->
+                <div class="user-type-selector">
+                    <button type="button" class="type-btn active" data-type="usuario" onclick="selectUserType('usuario')">
+                        <i class="bi bi-person-fill"></i>
+                        <span>Beneficiario</span>
+                    </button>
+                    <button type="button" class="type-btn" data-type="empresa" onclick="selectUserType('empresa')">
+                        <i class="bi bi-building"></i>
+                        <span>Empresa</span>
+                    </button>
+                </div>
+                
+                <form method="post" id="registerForm" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="tipo_usuario" id="tipo_usuario" value="usuario">
+                    
+                    <!-- Formulario para Beneficiario -->
+                    <div id="formUsuario" class="form-content">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <i class="bi bi-person"></i> Nombre *
+                                </label>
+                                <input type="text" name="nombre" class="form-control" placeholder="Juan" required>
+                                <div class="invalid-feedback">Por favor ingresa tu nombre</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <i class="bi bi-person"></i> Apellidos *
+                                </label>
+                                <input type="text" name="apellidos" class="form-control" placeholder="Pérez García" required>
+                                <div class="invalid-feedback">Por favor ingresa tus apellidos</div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="bi bi-credit-card"></i> RUT *
+                            </label>
+                            <input type="text" name="rut" id="rutInput" class="form-control" placeholder="12.345.678-9" required>
+                            <div class="invalid-feedback">Por favor ingresa un RUT válido</div>
+                            <small class="form-text">Formato: 12.345.678-9</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="bi bi-envelope"></i> Email *
+                            </label>
+                            <input type="email" name="email" class="form-control" placeholder="ejemplo@correo.com" required>
+                            <div class="invalid-feedback">Por favor ingresa un email válido</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="bi bi-person-circle"></i> Usuario *
+                            </label>
+                            <input type="text" name="username" class="form-control" placeholder="nombre_usuario" required>
+                            <div class="invalid-feedback">Por favor ingresa un nombre de usuario</div>
+                            <small class="form-text">Mínimo 4 caracteres, sin espacios</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="bi bi-lock"></i> Contraseña *
+                            </label>
+                            <div class="password-input">
+                                <input type="password" name="password" id="password" class="form-control" placeholder="••••••••" required>
+                                <button type="button" class="toggle-password" onclick="togglePassword()">
+                                    <i class="bi bi-eye" id="passwordIcon"></i>
+                                </button>
+                            </div>
+                            <div class="invalid-feedback">La contraseña debe tener al menos 8 caracteres</div>
+                            
+                            <!-- Indicador de fortaleza -->
+                            <div class="password-strength">
+                                <div class="strength-bar">
+                                    <div class="strength-fill" id="strengthFill"></div>
+                                </div>
+                                <small id="strengthText" class="strength-text">Ingresa una contraseña</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="bi bi-lock-fill"></i> Confirmar Contraseña *
+                            </label>
+                            <input type="password" name="password_confirm" id="password_confirm" class="form-control" placeholder="••••••••" required>
+                            <div class="invalid-feedback">Las contraseñas no coinciden</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Formulario para Empresa (oculto inicialmente) -->
+                    <div id="formEmpresa" class="form-content" style="display: none;">
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="bi bi-building"></i> Razón Social *
+                            </label>
+                            <input type="text" name="razon_social" class="form-control" placeholder="Constructora Ejemplo S.A." required>
+                            <div class="invalid-feedback">Por favor ingresa la razón social</div>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <i class="bi bi-credit-card"></i> RUT Empresa *
+                                </label>
+                                <input type="text" name="rut_empresa" class="form-control" placeholder="76.123.456-7" required>
+                                <div class="invalid-feedback">Por favor ingresa el RUT de la empresa</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <i class="bi bi-telephone"></i> Teléfono
+                                </label>
+                                <input type="tel" name="telefono_empresa" class="form-control" placeholder="+56 2 1234 5678">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="bi bi-envelope"></i> Email Corporativo *
+                            </label>
+                            <input type="email" name="email_empresa" class="form-control" placeholder="contacto@empresa.cl" required>
+                            <div class="invalid-feedback">Por favor ingresa un email válido</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="bi bi-house"></i> Dirección
+                            </label>
+                            <input type="text" name="direccion_empresa" class="form-control" placeholder="Av. Principal 123, Santiago">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="bi bi-person-circle"></i> Usuario *
+                            </label>
+                            <input type="text" name="username_empresa" class="form-control" placeholder="nombre_empresa" required>
+                            <div class="invalid-feedback">Por favor ingresa un nombre de usuario</div>
+                            <small class="form-text">Mínimo 4 caracteres, sin espacios</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="bi bi-lock"></i> Contraseña *
+                            </label>
+                            <input type="password" name="password_empresa" id="password_empresa" class="form-control" placeholder="••••••••" required>
+                            <div class="invalid-feedback">La contraseña debe tener al menos 8 caracteres</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="bi bi-lock-fill"></i> Confirmar Contraseña *
+                            </label>
+                            <input type="password" name="password_empresa_confirm" id="password_empresa_confirm" class="form-control" placeholder="••••••••" required>
+                            <div class="invalid-feedback">Las contraseñas no coinciden</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Términos y condiciones -->
+                    <div class="form-group">
+                        <div class="custom-checkbox">
+                            <input type="checkbox" id="terms" required>
+                            <label for="terms">
+                                Acepto los <a href="#" onclick="showTerms()">términos y condiciones</a> y la 
+                                <a href="#" onclick="showPrivacy()">política de privacidad</a>
+                            </label>
+                        </div>
+                        <div class="invalid-feedback">Debes aceptar los términos y condiciones</div>
+                    </div>
+                    
+                    <button type="submit" class="btn-submit">
+                        <span class="btn-text">Aceptar y Crear Perfil</span>
+                        <span class="btn-loading" style="display: none;">
+                            <span class="spinner"></span> Creando cuenta...
+                        </span>
+                    </button>
+                </form>
+                
+                <div class="form-footer">
+                    <p>¿Ya tienes una cuenta? <a href="{% url 'gestion:login' %}">Iniciar sesión</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<style>
+:root {
+    --primary: #6366f1;
+    --secondary: #8b5cf6;
+}
+
+.register-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    position: relative;
+    z-index: 1;
+}
+
+
+.register-wrapper {
+    max-width: 1200px;
+    width: 100%;
+    background: white;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    display: grid;
+    grid-template-columns: 45% 55%;
+}
+
+.info-panel {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 3rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+}
+
+info-panel::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    animation: rotate 30s linear infinite;
+}
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+.info-content {
+    position: relative;
+    z-index: 1;
+}
+
+.logo-section {
+    margin-bottom: 3rem;
+}
+.logo-section i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    display: block;
+    animation: pulse 2s infinite;
+}
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.logo-section h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.features {
+    margin-bottom: 3rem;
+}
+
+.feature-item {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    align-items: flex-start;
+}
+
+.feature-icon {
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+.feature-icon i {
+    color: white;
+}
+.feature-text h4 {
+    font-size: 1.1rem;
+    margin-bottom: 0.3rem;
+    font-weight: 600;
+}
+.feature-text p {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    margin: 0;
+}
+.stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+}
+
+.stat-item h3 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+}
+
+.stat-item p {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    margin: 0;
+}
+
+.form-panel {
+    padding: 3rem;
+    overflow-y: auto;
+    max-height: 90vh;
+}
+
+.form-container {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.form-header {
+    margin-bottom: 2rem;
+}
+
+.form-header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+}
+
+.form-header p {
+    color: #6c757d;
+    margin: 0;
+}
+
+.user-type-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.type-btn {
+    padding: 1rem;
+    border: 2px solid #e5e7eb;
+    background: white;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.type-btn i {
+    font-size: 2rem;
+    color: #6c757d;
+}
+
+.type-btn span {
+    font-weight: 600;
+    color: #6c757d;
+}
+
+.type-btn:hover {
+    border-color: var(--primary);
+    background: rgba(99, 102, 241, 0.05);
+}
+
+.type-btn.active {
+    border-color: var(--primary);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+}
+
+.type-btn.active i,
+.type-btn.active span {
+    color: var(--primary);
+}
+
+.form-content {
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+}
+
+.form-label i {
+    color: var(--primary);
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.9rem 1rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    outline: none;
+}
+
+.form-control.is-invalid {
+    border-color: #ef4444;
+}
+
+.form-control.is-valid {
+    border-color: #10b981;
+}
+
+.invalid-feedback {
+    color: #ef4444;
+    font-size: 0.85rem;
+    margin-top: 0.3rem;
+    display: none;
+}
+
+.form-control.is-invalid ~ .invalid-feedback {
+    display: block;
+}
+
+.form-text {
+    color: #6c757d;
+    font-size: 0.85rem;
+    margin-top: 0.3rem;
+    display: block;
+}
+
+.password-input {
+    position: relative;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: color 0.3s ease;
+}
+
+.toggle-password:hover {
+    color: var(--primary);
+}
+
+.password-strength {
+    margin-top: 0.8rem;
+}
+
+.strength-bar {
+    height: 4px;
+    background: #e5e7eb;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.strength-fill {
+    height: 100%;
+    width: 0%;
+    transition: all 0.3s ease;
+    border-radius: 2px;
+}
+
+.strength-text {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.custom-checkbox {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.8rem;
+}
+
+.custom-checkbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-top: 0.2rem;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.custom-checkbox label {
+    font-size: 0.9rem;
+    color: #6c757d;
+    cursor: pointer;
+}
+
+.custom-checkbox a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.custom-checkbox a:hover {
+    text-decoration: underline;
+}
+
+.btn-submit {
+    width: 100%;
+    padding: 1rem;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 1rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+}
+
+.btn-submit:active {
+    transform: translateY(0);
+}
+
+.btn-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.form-footer {
+    text-align: center;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.form-footer p {
+    color: #6c757d;
+    margin: 0;
+}
+
+.form-footer a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.form-footer a:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 992px) {
+    .register-wrapper {
+        grid-template-columns: 1fr;
+    }
+    
+    .info-panel {
+        display: none;
+    }
+    
+    .form-panel {
+        padding: 2rem 1.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .user-type-selector {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+// Selector de tipo de usuario
+function selectUserType(type) {
+    const buttons = document.querySelectorAll('.type-btn');
+    buttons.forEach(btn => btn.classList.remove('active'));
+    event.target.closest('.type-btn').classList.add('active');
+    
+    document.getElementById('tipo_usuario').value = type;
+    
+    if (type === 'usuario') {
+        document.getElementById('formUsuario').style.display = 'block';
+        document.getElementById('formEmpresa').style.display = 'none';
+    } else {
+        document.getElementById('formUsuario').style.display = 'none';
+        document.getElementById('formEmpresa').style.display = 'block';
+    }
+}
+
+// Toggle password visibility
+function togglePassword() {
+    const passwordInput = document.getElementById('password');
+    const icon = document.getElementById('passwordIcon');
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        icon.classList.remove('bi-eye');
+        icon.classList.add('bi-eye-slash');
+    } else {
+        passwordInput.type = 'password';
+        icon.classList.remove('bi-eye-slash');
+        icon.classList.add('bi-eye');
+    }
+}
+
+// Password strength checker for usuario
+document.getElementById('password')?.addEventListener('input', function() {
+    const password = this.value;
+    const strengthFill = document.getElementById('strengthFill');
+    const strengthText = document.getElementById('strengthText');
+
+    let strength = 0;
+    if (password.length >= 8) strength += 25;
+    if (password.match(/[a-z]/) && password.match(/[A-Z]/)) strength += 25;
+    if (password.match(/[0-9]/)) strength += 25;
+    if (password.match(/[^a-zA-Z0-9]/)) strength += 25;
+
+    strengthFill.style.width = strength + '%';
+
+    if (strength === 0) {
+        strengthFill.style.background = '#e5e7eb';
+        strengthText.textContent = 'Ingresa una contraseña';
+        strengthText.style.color = '#6c757d';
+    } else if (strength <= 25) {
+        strengthFill.style.background = '#ef4444';
+        strengthText.textContent = 'Contraseña débil';
+        strengthText.style.color = '#ef4444';
+    } else if (strength <= 50) {
+        strengthFill.style.background = '#f59e0b';
+        strengthText.textContent = 'Contraseña regular';
+        strengthText.style.color = '#f59e0b';
+    } else if (strength <= 75) {
+        strengthFill.style.background = '#3b82f6';
+        strengthText.textContent = 'Contraseña buena';
+        strengthText.style.color = '#3b82f6';
+    } else {
+        strengthFill.style.background = '#10b981';
+        strengthText.textContent = 'Contraseña excelente';
+        strengthText.style.color = '#10b981';
+    }
+});
+
+// Validación de confirmación de contraseña for usuario
+document.getElementById('password_confirm')?.addEventListener('input', function() {
+    const password = document.getElementById('password').value;
+    const confirm = this.value;
+
+    if (confirm && password !== confirm) {
+        this.classList.add('is-invalid');
+        this.classList.remove('is-valid');
+    } else if (confirm) {
+        this.classList.remove('is-invalid');
+        this.classList.add('is-valid');
+    }
+});
+
+// Password strength checker for empresa
+document.getElementById('password_empresa')?.addEventListener('input', function() {
+    const password = this.value;
+    // For empresa, we don't have a strength bar, so just basic validation
+    if (password && password.length < 8) {
+        this.classList.add('is-invalid');
+        this.classList.remove('is-valid');
+    } else if (password) {
+        this.classList.remove('is-invalid');
+        this.classList.add('is-valid');
+    }
+});
+
+// Validación de confirmación de contraseña for empresa
+document.getElementById('password_empresa_confirm')?.addEventListener('input', function() {
+    const password = document.getElementById('password_empresa').value;
+    const confirm = this.value;
+
+    if (confirm && password !== confirm) {
+        this.classList.add('is-invalid');
+        this.classList.remove('is-valid');
+    } else if (confirm) {
+        this.classList.remove('is-invalid');
+        this.classList.add('is-valid');
+    }
+});
+
+// Formato RUT automático
+document.getElementById('rutInput')?.addEventListener('input', function(e) {
+    let value = e.target.value.replace(/[^\dkK]/g, '');
+    if (value.length > 1) {
+        value = value.slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + '-' + value.slice(-1);
+    }
+    e.target.value = value;
+});
+
+// Validación del formulario
+document.getElementById('registerForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const form = this;
+    let isValid = true;
+
+    // Validar campos requeridos según el tipo de usuario seleccionado
+    const tipo = document.getElementById('tipo_usuario').value;
+    let requiredFields;
+
+    if (tipo === 'usuario') {
+        // Solo validar campos del formulario de usuario
+        requiredFields = document.querySelectorAll('#formUsuario [required]');
+    } else if (tipo === 'empresa') {
+        // Solo validar campos del formulario de empresa
+        requiredFields = document.querySelectorAll('#formEmpresa [required]');
+    } else {
+        // Fallback: validar todos los campos requeridos
+        requiredFields = form.querySelectorAll('[required]');
+    }
+
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            field.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            field.classList.remove('is-invalid');
+            field.classList.add('is-valid');
+        }
+    });
+
+    // Validar contraseñas según tipo de usuario
+    if (tipo === 'usuario') {
+        const password = document.getElementById('password').value;
+        const passwordConfirm = document.getElementById('password_confirm').value;
+
+        if (password && password.length < 8) {
+            document.getElementById('password').classList.add('is-invalid');
+            isValid = false;
+        }
+
+        if (password !== passwordConfirm) {
+            document.getElementById('password_confirm').classList.add('is-invalid');
+            isValid = false;
+        }
+    } else if (tipo === 'empresa') {
+        const passwordEmpresa = document.getElementById('password_empresa').value;
+        const passwordEmpresaConfirm = document.getElementById('password_empresa_confirm').value;
+
+        if (passwordEmpresa && passwordEmpresa.length < 8) {
+            document.getElementById('password_empresa').classList.add('is-invalid');
+            isValid = false;
+        }
+
+        if (passwordEmpresa !== passwordEmpresaConfirm) {
+            document.getElementById('password_empresa_confirm').classList.add('is-invalid');
+            isValid = false;
+        }
+    }
+
+    // Validar términos
+    const terms = document.getElementById('terms');
+    if (!terms.checked) {
+        isValid = false;
+        notify('Debes aceptar los términos y condiciones', 'warning');
+    }
+
+    if (isValid) {
+        // Mostrar loading
+        const btnText = form.querySelector('.btn-text');
+        const btnLoading = form.querySelector('.btn-loading');
+        const submitBtn = form.querySelector('.btn-submit');
+
+        btnText.style.display = 'none';
+        btnLoading.style.display = 'flex';
+        submitBtn.disabled = true;
+
+        // Simular envío (quitar esto y enviar el formulario real)
+        setTimeout(() => {
+            form.submit();
+        }, 1500);
+    } else {
+        notify('Por favor completa todos los campos requeridos', 'error');
+    }
+});
+
+// Mostrar términos y condiciones
+function showTerms() {
+    event.preventDefault();
+    notify('Términos y condiciones (modal pendiente)', 'info');
+}
+
+function showPrivacy() {
+    event.preventDefault();
+    notify('Política de privacidad (modal pendiente)', 'info');
+}
+
+// Animación de entrada
+document.addEventListener('DOMContentLoaded', () => {
+    const formGroups = document.querySelectorAll('.form-group');
+    formGroups.forEach((group, index) => {
+        group.style.opacity = '0';
+        group.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            group.style.transition = 'all 0.5s ease';
+            group.style.opacity = '1';
+            group.style.transform = 'translateY(0)';
+        }, index * 50);
+    });
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,304 @@
+{% extends 'gestion/base.html' %}
+
+{% block title %}{{ proyecto.nombre_proyecto }} - Detalle{% endblock %}
+
+{% block content %}
+<style>
+    .progress {
+        height: 20px;
+        margin-bottom: 0;
+    }
+    .progress-bar {
+        transition: width .6s ease;
+    }
+    .map-container {
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    .map-preview {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+        padding: 2rem;
+        border-radius: 12px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    .map-preview:hover {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
+        transform: translateY(-2px);
+    }
+    .map-preview i {
+        font-size: 2rem;
+        color: var(--primary);
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+</style>
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="bi bi-building"></i> {{ proyecto.nombre_proyecto }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'gestion:proyectos_list' %}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+        {% if request.user.is_authenticated %}
+            {% if request.user.is_staff or user_tipo == 'empresa' and proyecto.id_empresa_constructora == user.userprofile.usuariosistema.id_empresa %}
+                <a class="btn btn-warning" href="{% url 'gestion:proyecto_edit' proyecto.id_proyecto %}">
+                    <i class="bi bi-pencil"></i> Editar
+                </a>
+            {% endif %}
+            {% if user_tipo == 'usuario' and not user.userprofile.usuariosistema.id_empresa and proyecto.estado_proyecto != 'Finalizado' %}
+                {% if not ya_postulado %}
+                <form method="post" action="{% url 'gestion:proyecto_postular' proyecto.id_proyecto %}" style="display:inline">
+                    {% csrf_token %}
+                    <button class="btn btn-success"><i class="bi bi-send"></i> Postular</button>
+                </form>
+                {% else %}
+                <button class="btn btn-secondary" disabled><i class="bi bi-check-circle"></i> Ya has postulado</button>
+                {% endif %}
+            {% endif %}
+        {% else %}
+            <a class="btn btn-primary" href="{% url 'gestion:login' %}?next={% url 'gestion:proyecto_detail' proyecto.id_proyecto %}">
+                <i class="bi bi-box-arrow-in-right"></i> Iniciar sesión para postular
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <!-- Información del Proyecto -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Información del Proyecto</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <th width="40%">Nombre:</th>
+                        <td>{{ proyecto.nombre_proyecto }}</td>
+                    </tr>
+                    <tr>
+                        <th>Estado:</th>
+                        <td>
+                            {% if proyecto.estado_proyecto == 'En Construcción' %}
+                                <span class="badge bg-warning">{{ proyecto.estado_proyecto }}</span>
+                            {% elif proyecto.estado_proyecto == 'Finalizado' %}
+                                <span class="badge bg-success">{{ proyecto.estado_proyecto }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ proyecto.estado_proyecto }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Tipo de Vivienda:</th>
+                        <td><span class="badge bg-info">{{ proyecto.tipo_vivienda }}</span></td>
+                    </tr>
+                    <tr>
+                        <th>Número de Viviendas:</th>
+                        <td>{{ proyecto.numero_viviendas }}</td>
+                    </tr>
+                    <tr>
+                        <th>Superficie por Vivienda:</th>
+                        <td>{{ proyecto.superficie_vivienda }}m²</td>
+                    </tr>
+                    <tr>
+                        <th>Precio por Vivienda:</th>
+                        <td>${{ proyecto.precio_unitario|default:"0"|floatformat:0|stringformat:',d'|slice:':-3' }}.{{ proyecto.precio_unitario|floatformat:0|slice:'-3:' }}</td>
+                    </tr>
+                    {% if proyecto.descripcion %}
+                    <tr>
+                        <th>Descripción:</th>
+                        <td>{{ proyecto.descripcion }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ubicación y Empresa -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-geo-alt"></i> Ubicación y Empresa Constructora</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <th width="40%">Municipio:</th>
+                        <td>{{ proyecto.id_municipio.nombre_municipio }}</td>
+                    </tr>
+                    <tr>
+                        <th>Región:</th>
+                        <td>{{ proyecto.id_municipio.id_region.nombre_region }}</td>
+                    </tr>
+                    <tr>
+                        <th>Empresa Constructora:</th>
+                        <td>{{ proyecto.id_empresa_constructora.razon_social }}</td>
+                    </tr>
+                        <tr>
+                        <th>RUT Empresa:</th>
+                        <td>{{ proyecto.id_empresa_constructora.rut_empresa|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Email Empresa:</th>
+                        <td>{{ proyecto.id_empresa_constructora.email }}</td>
+                    </tr>
+                </table>
+                <!-- Si el servidor ya generó un mapa (Folium), mostrarlo directamente -->
+                {% if mapa_html %}
+                <div class="map-container" style="margin-top:1rem; border-radius:8px; overflow:hidden;">
+                    {{ mapa_html|safe }}
+                </div>
+                {% else %}
+                <div id="mapSingle" style="height:320px; margin-top:1rem; border-radius:8px; overflow:hidden;"></div>
+                <script>
+                (function(){
+                    const coordLat = {{ map_lat|default:'null' }};
+                    const coordLng = {{ map_lng|default:'null' }};
+                    const defaultLat = -33.45; // Santiago
+                    const defaultLng = -70.6667;
+                    function initLeaflet(){
+                        const s = document.createElement('link');
+                        s.rel = 'stylesheet'; s.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                        document.head.appendChild(s);
+                        const script = document.createElement('script');
+                        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                        script.onload = function(){
+                            const hasCoord = (coordLat !== null && coordLng !== null && coordLat !== 'null' && coordLng !== 'null');
+                            const viewLat = hasCoord ? coordLat : defaultLat;
+                            const viewLng = hasCoord ? coordLng : defaultLng;
+                            const zoom = hasCoord ? 15 : 6;
+                            const map = L.map('mapSingle').setView([viewLat, viewLng], zoom);
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+                            if (hasCoord){
+                                L.marker([coordLat, coordLng]).addTo(map).bindPopup(`<strong>${""+"{{ proyecto.nombre_proyecto|escapejs }}"}</strong><br>${""+"{{ proyecto.id_terreno.direccion|default:''|escapejs }}"}`);
+                            }
+                        };
+                        document.body.appendChild(script);
+                    }
+
+                    if (window.Tullim && typeof window.Tullim.createMap === 'function'){
+                        try{
+                            const m = window.Tullim.createMap(document.getElementById('mapSingle'), { zoom: coordLat ? 15 : 6 });
+                            if (coordLat && coordLng) m.addMarker({ lat: coordLat, lng: coordLng, popup: `<strong>${""+"{{ proyecto.nombre_proyecto|escapejs }}"}</strong>` });
+                        }catch(e){
+                            console.warn('Tullim not usable, fallback', e); initLeaflet();
+                        }
+                    } else {
+                        initLeaflet();
+                    }
+                })();
+                </script>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Fechas y Plazos -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="bi bi-calendar"></i> Fechas y Plazos</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <th width="40%">Fecha de Inicio:</th>
+                        <td>{{ proyecto.fecha_inicio|date:"d/m/Y" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Fecha Fin Estimada:</th>
+                        <td>{{ proyecto.fecha_fin_estimada|date:"d/m/Y" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Plazo Construcción:</th>
+                        <td>{{ proyecto.plazo_construccion|default:"N/A" }}{% if proyecto.plazo_construccion %} meses{% endif %}</td>
+                    </tr>
+                    <tr>
+                        <th>Avance:</th>
+                        <td>
+                            {% comment %} Mostrar porcentaje si existe, sino 0 {% endcomment %}
+                            {% with porcentaje=proyecto.porcentaje_avance|default:0 %}
+                            <div class="progress">
+                                <div class="progress-bar bg-success" role="progressbar"
+                                     style="width: {{ porcentaje }}%"
+                                     aria-valuenow="{{ porcentaje }}"
+                                     aria-valuemin="0"
+                                     aria-valuemax="100">
+                                    {{ porcentaje }}%
+                                </div>
+                            </div>
+                            {% endwith %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Postulaciones -->
+    {% if user_tipo == 'empresa' and proyecto.id_empresa_constructora == user.userprofile.usuariosistema.id_empresa or user.is_staff %}
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> Postulaciones</h5>
+            </div>
+            <div class="card-body">
+                {% if postulaciones %}
+                    <div class="list-group">
+                        {% for postulacion in postulaciones %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ postulacion.id_beneficiario.nombre }} {{ postulacion.id_beneficiario.apellidos }}</h6>
+                                    <small class="text-muted">
+                                        RUT: {{ postulacion.id_beneficiario.rut }}<br>
+                                        Fecha: {{ postulacion.fecha_postulacion|date:"d/m/Y" }}
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    {% if postulacion.estado_postulacion == 'Aprobada' %}
+                                        <span class="badge bg-success">{{ postulacion.estado_postulacion }}</span>
+                                    {% elif postulacion.estado_postulacion == 'Rechazada' %}
+                                        <span class="badge bg-danger">{{ postulacion.estado_postulacion }}</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">{{ postulacion.estado_postulacion }}</span>
+                                        {% if user.is_staff %}
+                                        <div class="mt-2">
+                                            <form method="post" action="{% url 'gestion:postulacion_update' postulacion.id_postulacion %}" style="display:inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="estado" value="Aprobada">
+                                                <button type="submit" class="btn btn-sm btn-success">Aprobar</button>
+                                            </form>
+                                            <form method="post" action="{% url 'gestion:postulacion_update' postulacion.id_postulacion %}" style="display:inline" class="ms-1">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="estado" value="Rechazada">
+                                                <button type="submit" class="btn btn-sm btn-danger">Rechazar</button>
+                                            </form>
+                                        </div>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <strong>Puntaje:</strong> {{ postulacion.puntaje_asignado|default:"N/A" }}
+                                {% if postulacion.observaciones %}
+                                <br>
+                                <strong>Observaciones:</strong> {{ postulacion.observaciones }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No hay postulaciones registradas para este proyecto</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

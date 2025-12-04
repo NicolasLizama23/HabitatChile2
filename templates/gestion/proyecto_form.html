@@ -1,0 +1,919 @@
+{% extends 'gestion/base.html' %}
+
+{% block title %}{{ action }} Proyecto{% endblock %}
+
+{% block content %}
+<div class="form-container-wrapper">
+    <div class="form-header-section">
+        <div class="container">
+            <a href="{% url 'gestion:proyectos_list' %}" class="back-link">
+                <i class="bi bi-arrow-left"></i> Volver a Proyectos
+            </a>
+            <h1 class="form-main-title">
+                <i class="bi bi-building"></i> {{ action }} Proyecto Habitacional
+            </h1>
+            <p class="form-subtitle">Complete la información del proyecto para continuar</p>
+        </div>
+    </div>
+    
+    <div class="container mt-4">
+        <!-- Stepper/Progress -->
+        <div class="form-stepper mb-5">
+            <div class="step active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-label">Información Básica</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-label">Detalles Técnicos</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="step" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-label">Ubicación y Fechas</div>
+            </div>
+        </div>
+        
+        <form method="post" id="proyectoForm" class="modern-form">
+            {% csrf_token %}
+            
+            <!-- Step 1: Información Básica -->
+            <div class="form-step active" data-step="1">
+                <div class="card form-card">
+                    <div class="card-header">
+                        <h3>
+                            <i class="bi bi-info-circle-fill"></i> Información Básica del Proyecto
+                        </h3>
+                        <p>Datos principales que identifican el proyecto</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-4">
+                            <div class="col-md-12">
+                                <div class="form-floating-custom">
+                                    <label class="form-label">
+                                        <i class="bi bi-building"></i> Nombre del Proyecto *
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        name="nombre_proyecto" 
+                                        class="form-control" 
+                                        placeholder="Villa Esperanza, Residencial Los Pinos, etc."
+                                        value="{{ proyecto.nombre_proyecto|default:'' }}"
+                                        required>
+                                    <small class="form-text">Nombre comercial o identificador del proyecto</small>
+                                    <div class="invalid-feedback">Por favor ingrese el nombre del proyecto</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <div class="form-floating-custom">
+                                    <label class="form-label">
+                                        <i class="bi bi-file-text"></i> Descripción
+                                    </label>
+                                    <textarea 
+                                        name="descripcion" 
+                                        class="form-control" 
+                                        rows="4"
+                                        placeholder="Describa las características principales del proyecto...">{{ proyecto.descripcion|default:'' }}</textarea>
+                                    <small class="form-text">Descripción detallada del proyecto habitacional</small>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-floating-custom">
+                                    <label class="form-label">
+                                        <i class="bi bi-house-door"></i> Tipo de Vivienda *
+                                    </label>
+                                    <select name="tipo_vivienda" class="form-select" required>
+                                        <option value="">Seleccione tipo...</option>
+                                        <option value="Casa" {% if proyecto.tipo_vivienda == 'Casa' %}selected{% endif %}>Casa</option>
+                                        <option value="Departamento" {% if proyecto.tipo_vivienda == 'Departamento' %}selected{% endif %}>Departamento</option>
+                                        <option value="Dúplex" {% if proyecto.tipo_vivienda == 'Dúplex' %}selected{% endif %}>Dúplex</option>
+                                        <option value="Condominio" {% if proyecto.tipo_vivienda == 'Condominio' %}selected{% endif %}>Condominio</option>
+                                    </select>
+                                    <div class="invalid-feedback">Por favor seleccione el tipo de vivienda</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-floating-custom">
+                                    <label class="form-label">
+                                        <i class="bi bi-check-circle"></i> Estado del Proyecto *
+                                    </label>
+                                    <select name="estado_proyecto" class="form-select" required>
+                                        <option value="">Seleccione estado...</option>
+                                        <option value="En Planificación" {% if proyecto.estado_proyecto == 'En Planificación' %}selected{% endif %}>En Planificación</option>
+                                        <option value="En Construcción" {% if proyecto.estado_proyecto == 'En Construcción' %}selected{% endif %}>En Construcción</option>
+                                        <option value="Finalizado" {% if proyecto.estado_proyecto == 'Finalizado' %}selected{% endif %}>Finalizado</option>
+                                        <option value="Suspendido" {% if proyecto.estado_proyecto == 'Suspendido' %}selected{% endif %}>Suspendido</option>
+                                    </select>
+                                    <div class="invalid-feedback">Por favor seleccione el estado</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-navigation">
+                    <button type="button" class="btn btn-primary btn-next" onclick="nextStep(1)">
+                        Siguiente <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Step 2: Detalles Técnicos -->
+            <div class="form-step" data-step="2">
+                <div class="card form-card">
+                    <div class="card-header">
+                        <h3>
+                            <i class="bi bi-tools"></i> Detalles Técnicos
+                        </h3>
+                        <p>Especificaciones técnicas y costos del proyecto</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-4">
+                            <div class="col-md-4">
+                                <div class="form-floating-custom">
+                                    <label class="form-label">
+                                        <i class="bi bi-houses"></i> Número de Viviendas *
+                                    </label>
+                                    <input 
+                                        type="number" 
+                                        name="numero_viviendas" 
+                                        class="form-control" 
+                                        placeholder="0"
+                                        value="{{ proyecto.numero_viviendas|default:'' }}"
+                                        min="1"
+                                        required>
+                                    <small class="form-text">Cantidad total de unidades</small>
+                                    <div class="invalid-feedback">Ingrese un número válido</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="form-floating-custom">
+                                    <label class="form-label">
+                                        <i class="bi bi-rulers"></i> Superficie por Vivienda (m²) *
+                                    </label>
+                                    <input 
+                                        type="number" 
+                                        name="superficie_vivienda" 
+                                        class="form-control" 
+                                        placeholder="0.00"
+                                        value="{{ proyecto.superficie_vivienda|default:'' }}"
+                                        step="0.01"
+                                        min="0"
+                                        required>
+                                    <small class="form-text">Metros cuadrados por unidad</small>
+                                    <div class="invalid-feedback">Ingrese la superficie</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="form-floating-custom">
+                                    <label class="form-label">
+                                        <i class="bi bi-currency-dollar"></i> Precio Unitario *
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input 
+                                            type="number" 
+                                            name="precio_unitario" 
+                                            class="form-control" 
+                                            placeholder="0"
+                                            value="{{ proyecto.precio_unitario|default:'' }}"
+                                            min="0"
+                                            required>
+                                    </div>
+                                    <small class="form-text">Precio por vivienda</small>
+                                    <div class="invalid-feedback">Ingrese el precio unitario</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-floating-custom">
+                                    <label class="form-label">
+                                        <i class="bi bi-door-open"></i> Número de Dormitorios
+                                    </label>
+                                    <select name="numero_dormitorios" class="form-select">
+                                        <option value="">Seleccione...</option>
+                                        <option value="1">1 Dormitorio</option>
+                                        <option value="2">2 Dormitorios</option>
+                                        <option value="3">3 Dormitorios</option>
+                                        <option value="4">4 Dormitorios</option>
+                                        <option value="5">5+ Dormitorios</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-floating-custom">
+                                    <label class="form-label">
+                                        <i class="bi bi-droplet"></i> Número de Baños
+                                    </label>
+                                    <select name="numero_banos" class="form-select">
+                                        <option value="">Seleccione...</option>
+                                        <option value="1">1 Baño</option>
+                                        <option value="1.5">1.5 Baños</option>
+                                        <option value="2">2 Baños</option>
+                                        <option value="2.5">2.5 Baños</option>
+                                        <option value="3">3+ Baños</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <div class="calculation-card">
+                                    <h5><i class="bi bi-calculator"></i> Cálculo Automático</h5>
+                                    <div class="calculation-grid">
+                                        <div class="calc-item">
+                                            <span>Inversión Total:</span>
+                                            <strong id="inversionTotal">$0</strong>
+                                        </div>
+                                        <div class="calc-item">
+                                            <span>Superficie Total:</span>
+                                            <strong id="superficieTotal">0 m²</strong>
+                                        </div>
+                                        <div class="calc-item">
+                                            <span>Precio por m²:</span>
+                                            <strong id="precioM2">$0</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-navigation">
+                    <button type="button" class="btn btn-outline-secondary btn-prev" onclick="prevStep(2)">
+                        <i class="bi bi-arrow-left"></i> Anterior
+                    </button>
+                    <button type="button" class="btn btn-primary btn-next" onclick="nextStep(2)">
+                        Siguiente <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Step 3: Ubicación y Fechas -->
+            <div class="form-step" data-step="3">
+                <div class="card form-card">
+                    <div class="card-header">
+                        <h3>
+                            <i class="bi bi-geo-alt-fill"></i> Ubicación y Fechas
+                        </h3>
+                        <p>Información de ubicación y cronograma</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="form-floating-custom">
+                                    <label class="form-label">
+                                        <i class="bi bi-map"></i> Región
+                                    </label>
+                                    <select name="region" class="form-select" id="regionSelect">
+                                        <option value="">Seleccione región...</option>
+                                        {% for region in regiones %}
+                                        <option value="{{ region.id_region }}">{{ region.nombre_region }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-floating-custom">
+                                    <label class="form-label">
+                                        <i class="bi bi-building"></i> Municipio *
+                                    </label>
+                                    <select name="id_municipio" class="form-select" id="municipioSelect" required>
+                                        <option value="">Seleccione municipio...</option>
+                                        {% for municipio in municipios %}
+                                        <option value="{{ municipio.id_municipio }}" {% if proyecto.id_municipio.id_municipio == municipio.id_municipio %}selected{% endif %}>{{ municipio.nombre_municipio }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="invalid-feedback">Por favor seleccione el municipio</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <div class="form-floating-custom">
+                                    <label class="form-label">
+                                        <i class="bi bi-house-fill"></i> Dirección del Proyecto
+                                    </label>
+                                    <input 
+                                        type="text" 
+                                        name="direccion" 
+                                        class="form-control" 
+                                        placeholder="Calle, Número, Comuna">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating-custom">
+                                    <label class="form-label">
+                                        <i class="bi bi-geo"></i> Latitud
+                                    </label>
+                                    <input type="text" name="latitud" class="form-control" placeholder="-33.4489" value="{{ proyecto.latitud|default:'' }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating-custom">
+                                    <label class="form-label">
+                                        <i class="bi bi-geo-alt"></i> Longitud
+                                    </label>
+                                    <input type="text" name="longitud" class="form-control" placeholder="-70.6693" value="{{ proyecto.longitud|default:'' }}">
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary" id="btnGeocode">Obtener coordenadas desde dirección</button>
+                                    <small class="text-muted align-self-center">Usa Nominatim (OpenStreetMap) para geocodificar la dirección en el navegador.</small>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-floating-custom">
+                                    <label class="form-label">
+                                        <i class="bi bi-calendar-event"></i> Fecha de Inicio *
+                                    </label>
+                                    <input 
+                                        type="date" 
+                                        name="fecha_inicio" 
+                                        class="form-control"
+                                        value="{{ proyecto.fecha_inicio|date:'Y-m-d'|default:'' }}"
+                                        required>
+                                    <div class="invalid-feedback">Por favor ingrese la fecha de inicio</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-floating-custom">
+                                    <label class="form-label">
+                                        <i class="bi bi-calendar-check"></i> Fecha de Fin Estimada *
+                                    </label>
+                                    <input 
+                                        type="date" 
+                                        name="fecha_fin_estimada" 
+                                        class="form-control"
+                                        value="{{ proyecto.fecha_fin_estimada|date:'Y-m-d'|default:'' }}"
+                                        required>
+                                    <div class="invalid-feedback">Por favor ingrese la fecha estimada</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <div class="form-floating-custom">
+                                    <label class="form-label">
+                                        <i class="bi bi-briefcase"></i> Empresa Constructora
+                                    </label>
+                                    <select name="id_empresa_constructora" class="form-select">
+                                        <option value="">Seleccione empresa...</option>
+                                        {% for empresa in empresas %}
+                                        <option value="{{ empresa.id_empresa }}" {% if proyecto.id_empresa_constructora.id_empresa == empresa.id_empresa %}selected{% endif %}>{{ empresa.razon_social }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <div class="timeline-preview">
+                                    <h6><i class="bi bi-clock-history"></i> Duración Estimada</h6>
+                                    <div class="timeline-bar">
+                                        <div class="timeline-fill"></div>
+                                    </div>
+                                    <p id="duracionText">Seleccione las fechas para ver la duración</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-navigation">
+                    <button type="button" class="btn btn-outline-secondary btn-prev" onclick="prevStep(3)">
+                        <i class="bi bi-arrow-left"></i> Anterior
+                    </button>
+                    <button type="submit" class="btn btn-success btn-submit">
+                        <span class="btn-text">
+                            <i class="bi bi-check-circle"></i> {{ action }} Proyecto
+                        </span>
+                        <span class="btn-loading" style="display: none;">
+                            <span class="spinner"></span> Guardando...
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.form-container-wrapper {
+    min-height: 100vh;
+    padding-bottom: 4rem;
+}
+
+.form-header-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 3rem 0;
+    margin-bottom: 3rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.form-header-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="40" fill="rgba(255,255,255,0.05)"/></svg>');
+    opacity: 0.3;
+}
+
+.back-link {
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.back-link:hover {
+    color: white;
+    transform: translateX(-5px);
+}
+
+.form-main-title {
+    color: white;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.form-subtitle {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.1rem;
+}
+
+.form-stepper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.8rem;
+    opacity: 0.5;
+    transition: all 0.3s ease;
+}
+
+.step.active {
+    opacity: 1;
+}
+
+.step-number {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #e5e7eb;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+}
+
+.step.active .step-number {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.step-label {
+    font-weight: 600;
+    color: #6c757d;
+    text-align: center;
+}
+
+.step.active .step-label {
+    color: var(--primary);
+}
+
+.step-line {
+    flex: 1;
+    height: 2px;
+    background: #e5e7eb;
+    margin: 0 1rem;
+    max-width: 100px;
+}
+
+.form-step {
+    display: none;
+    animation: fadeIn 0.5s ease;
+}
+
+.form-step.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.form-card {
+    background: white;
+    border: none;
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    margin-bottom: 2rem;
+}
+
+.form-card .card-header {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+    border-bottom: 2px solid rgba(99, 102, 241, 0.1);
+    padding: 2rem;
+}
+
+.form-card .card-header h3 {
+    color: var(--primary);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.form-card .card-header p {
+    color: #6c757d;
+    margin: 0;
+}
+
+.form-card .card-body {
+    padding: 2rem;
+}
+
+.form-floating-custom {
+    margin-bottom: 0;
+}
+
+.form-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+}
+
+.form-label i {
+    color: var(--primary);
+}
+
+.form-control,
+.form-select {
+    padding: 0.9rem 1rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.form-text {
+    color: #6c757d;
+    font-size: 0.85rem;
+    margin-top: 0.3rem;
+    display: block;
+}
+
+.calculation-card {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 2px solid rgba(99, 102, 241, 0.1);
+}
+
+.calculation-card h5 {
+    color: var(--primary);
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.calculation-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.calc-item {
+    background: white;
+    padding: 1rem;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.calc-item span {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.calc-item strong {
+    color: var(--primary);
+    font-size: 1.3rem;
+}
+
+.timeline-preview {
+    background: rgba(0, 0, 0, 0.02);
+    padding: 1.5rem;
+    border-radius: 12px;
+}
+
+.timeline-preview h6 {
+    color: var(--primary);
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.timeline-bar {
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.8rem;
+}
+
+.timeline-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+    transition: width 0.5s ease;
+}
+
+.form-navigation {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.btn-submit {
+    background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+    border: none;
+    color: white;
+    font-weight: 600;
+    padding: 1rem 2rem;
+    min-width: 200px;
+}
+
+.btn-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+}
+
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+    .form-stepper {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .step-line {
+        width: 2px;
+        height: 30px;
+        margin: 0;
+    }
+    
+    .form-navigation {
+        flex-direction: column-reverse;
+    }
+}
+</style>
+
+<script>
+let currentStep = 1;
+
+function updateSteps() {
+    const steps = document.querySelectorAll('.form-step');
+    steps.forEach(el => {
+        const stepNum = Number(el.getAttribute('data-step'));
+        if (stepNum === currentStep) {
+            el.classList.add('active');
+        } else {
+            el.classList.remove('active');
+        }
+    });
+
+    const stepItems = document.querySelectorAll('.form-stepper .step');
+    stepItems.forEach(si => {
+        const s = Number(si.getAttribute('data-step'));
+        if (s === currentStep) {
+            si.classList.add('active');
+        } else {
+            si.classList.remove('active');
+        }
+    });
+}
+
+function updateCalculations() {
+    const numViviendas = parseFloat(document.querySelector('[name="numero_viviendas"]')?.value) || 0;
+    const superficieVivienda = parseFloat(document.querySelector('[name="superficie_vivienda"]')?.value) || 0;
+    const precioUnitario = parseFloat(document.querySelector('[name="precio_unitario"]')?.value) || 0;
+
+    // Inversión Total = número de viviendas * precio unitario
+    const inversionTotal = numViviendas * precioUnitario;
+    document.getElementById('inversionTotal').textContent = `$${inversionTotal.toLocaleString()}`;
+
+    // Superficie Total = número de viviendas * superficie por vivienda
+    const superficieTotal = numViviendas * superficieVivienda;
+    document.getElementById('superficieTotal').textContent = `${superficieTotal.toLocaleString()} m²`;
+
+    // Precio por m² = precio unitario / superficie por vivienda (si superficie > 0)
+    const precioM2 = superficieVivienda > 0 ? precioUnitario / superficieVivienda : 0;
+    document.getElementById('precioM2').textContent = `$${precioM2.toFixed(2)}`;
+}
+
+function updateDuration() {
+    const inicioVal = document.querySelector('[name="fecha_inicio"]')?.value;
+    const finVal = document.querySelector('[name="fecha_fin_estimada"]')?.value;
+    const duracionTextEl = document.getElementById('duracionText');
+    const timelineFill = document.querySelector('.timeline-fill');
+
+    if (!inicioVal || !finVal) {
+        if (duracionTextEl) duracionTextEl.textContent = 'Seleccione las fechas para ver la duración';
+        if (timelineFill) timelineFill.style.width = '0%';
+        return;
+    }
+
+    const fechaInicio = new Date(inicioVal);
+    const fechaFin = new Date(finVal);
+    if (isNaN(fechaInicio) || isNaN(fechaFin) || fechaFin <= fechaInicio) {
+        if (duracionTextEl) duracionTextEl.textContent = 'Fechas inválidas';
+        if (timelineFill) timelineFill.style.width = '0%';
+        return;
+    }
+
+    const diffDays = Math.round((fechaFin - fechaInicio) / (1000 * 60 * 60 * 24));
+    if (duracionTextEl) duracionTextEl.textContent = `${diffDays} día(s) de duración estimada`;
+
+    // Mapea la duración a un porcentaje para la barra (máx 100%)
+    const maxDays = 365 * 3; // arbitrario: 3 años como 100%
+    const pct = Math.min(100, Math.round((diffDays / maxDays) * 100));
+    if (timelineFill) timelineFill.style.width = `${pct}%`;
+}
+
+function nextStep(step) {
+    // Añadir listener a los inputs de fecha para actualizar duración
+    const dateInputs = document.querySelectorAll('[name="fecha_inicio"], [name="fecha_fin_estimada"]');
+    dateInputs.forEach(input => {
+        input.removeEventListener('change', updateDuration);
+        input.addEventListener('change', updateDuration);
+    });
+
+    // Añadir listeners a los inputs de cálculo automático
+    const calcInputs = document.querySelectorAll('[name="numero_viviendas"], [name="superficie_vivienda"], [name="precio_unitario"]');
+    calcInputs.forEach(input => {
+        input.removeEventListener('input', updateCalculations);
+        input.addEventListener('input', updateCalculations);
+    });
+
+    const totalSteps = document.querySelectorAll('.form-step').length;
+    currentStep = Math.min(totalSteps, Number(step) + 1);
+    updateSteps();
+    updateDuration();
+    updateCalculations();
+}
+
+function prevStep(step) {
+    currentStep = Math.max(1, Number(step) - 1);
+    updateSteps();
+}
+
+// Validación del formulario
+document.getElementById('proyectoForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const form = this;
+    let isValid = true;
+    
+    // Validar todos los campos requeridos
+    const requiredFields = form.querySelectorAll('[required]');
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            field.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            field.classList.remove('is-invalid');
+            field.classList.add('is-valid');
+        }
+    });
+    
+    // Validar fechas
+    const fechaInicio = new Date(document.querySelector('[name="fecha_inicio"]').value);
+    const fechaFin = new Date(document.querySelector('[name="fecha_fin_estimada"]').value);
+    
+    if (fechaFin <= fechaInicio) {
+        notify('La fecha de fin debe ser posterior a la fecha de inicio', 'error');
+        isValid = false;
+    }
+    
+    if (isValid) {
+        // Mostrar loading
+        const btnText = form.querySelector('.btn-text');
+        const btnLoading = form.querySelector('.btn-loading');
+        const submitBtn = form.querySelector('.btn-submit');
+        
+        btnText.style.display = 'none';
+        btnLoading.style.display = 'flex';
+        submitBtn.disabled = true;
+        
+        // Enviar formulario
+        setTimeout(() => {
+            form.submit();
+        }, 1000);
+    } else {
+        notify('Por favor complete todos los campos correctamente', 'error');
+        // Volver al primer paso con errores
+        currentStep = 1;
+        updateSteps();
+    }
+});
+
+// Animación de entrada
+document.addEventListener('DOMContentLoaded', () => {
+    const formGroups = document.querySelectorAll('.form-floating-custom');
+    formGroups.forEach((group, index) => {
+        group.style.opacity = '0';
+        group.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            group.style.transition = 'all 0.5s ease';
+            group.style.opacity = '1';
+            group.style.transform = 'translateY(0)';
+        }, index * 50);
+    });
+});
+</script>
+
+<script>
+document.getElementById('btnGeocode')?.addEventListener('click', async function(){
+    const direccion = document.querySelector('[name="direccion"]').value;
+    const municipioSel = document.getElementById('municipioSelect');
+    const municipioText = municipioSel ? municipioSel.options[municipioSel.selectedIndex].text : '';
+    if (!direccion) {
+        alert('Ingrese la dirección antes de geocodificar');
+        return;
+    }
+    const q = encodeURIComponent(direccion + (municipioText ? ', ' + municipioText : '') + ', Chile');
+    try {
+        const resp = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`);
+        const data = await resp.json();
+        if (data && data.length > 0) {
+            const item = data[0];
+            document.querySelector('[name="latitud"]').value = parseFloat(item.lat).toFixed(6);
+            document.querySelector('[name="longitud"]').value = parseFloat(item.lon).toFixed(6);
+            alert('Coordenadas obtenidas y rellenadas');
+        } else {
+            alert('No se encontraron coordenadas para esa dirección');
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Error al geocodificar la dirección');
+    }
+});
+</script>
+
+{% endblock %} 

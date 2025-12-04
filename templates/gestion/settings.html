@@ -1,0 +1,980 @@
+{% extends 'gestion/base.html' %}
+
+{% block title %}Configuración - Sistema de Gestión Habitacional{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="bi bi-gear-fill"></i> Configuración</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <span class="badge bg-primary">{{ request.user.get_full_name|default:request.user.username }}</span>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Sidebar de navegación -->
+    <div class="col-lg-3">
+        <div class="list-group shadow-sm sticky-top" style="top: 20px;">
+            <a href="#perfil" class="list-group-item list-group-item-action active" data-bs-toggle="list">
+                <i class="bi bi-person-circle me-2"></i> Perfil
+            </a>
+            <a href="#cuenta" class="list-group-item list-group-item-action" data-bs-toggle="list">
+                <i class="bi bi-shield-lock me-2"></i> Cuenta y Seguridad
+            </a>
+            <a href="#notificaciones" class="list-group-item list-group-item-action" data-bs-toggle="list">
+                <i class="bi bi-bell me-2"></i> Notificaciones
+            </a>
+            <a href="#preferencias" class="list-group-item list-group-item-action" data-bs-toggle="list">
+                <i class="bi bi-sliders me-2"></i> Preferencias
+            </a>
+            <a href="#actividad" class="list-group-item list-group-item-action" data-bs-toggle="list">
+                <i class="bi bi-clock-history me-2"></i> Actividad
+            </a>
+        </div>
+    </div>
+
+    <!-- Contenido principal -->
+    <div class="col-lg-9">
+        <div class="tab-content">
+            <!-- Perfil -->
+            <div class="tab-pane fade show active" id="perfil">
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-0 pt-3">
+                        <h5 class="mb-1 fw-semibold">
+                            <i class="bi bi-person-circle text-primary"></i> Información Personal
+                        </h5>
+                        <p class="text-muted small mb-0">Actualiza tu información personal y foto de perfil</p>
+                    </div>
+                    <div class="card-body">
+                        <!-- Foto de perfil -->
+                        <div class="d-flex align-items-center mb-4 pb-4 border-bottom">
+                            <div class="position-relative me-3">
+                                <div class="avatar-lg bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 100px; height: 100px; font-size: 2.5rem; font-weight: 600;">
+                                    {{ request.user.first_name|first|default:request.user.username|first|upper }}{{ request.user.last_name|first|upper }}
+                                </div>
+                                <button class="btn btn-sm btn-primary position-absolute bottom-0 end-0 rounded-circle" style="width: 32px; height: 32px; padding: 0;" data-bs-toggle="tooltip" title="Cambiar foto">
+                                    <i class="bi bi-camera-fill"></i>
+                                </button>
+                            </div>
+                            <div>
+                                <h5 class="mb-1">{{ request.user.get_full_name|default:request.user.username }}</h5>
+                                <p class="text-muted mb-2">{{ request.user.email }}</p>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#uploadPhotoModal">
+                                    <i class="bi bi-upload"></i> Subir nueva foto
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i> Eliminar
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Formulario de perfil -->
+                        <form method="post" action="" id="formPerfil">
+                            {% csrf_token %}
+                            <input type="hidden" name="form_type" value="perfil">
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-person"></i> Nombre <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" name="nombre" class="form-control" value="{{ request.user.first_name }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-person"></i> Apellidos <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" name="apellidos" class="form-control" value="{{ request.user.last_name }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-envelope"></i> Email <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="email" name="email" class="form-control" value="{{ request.user.email }}" required>
+                                    <small class="text-muted">Tu email principal para notificaciones</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-telephone"></i> Teléfono
+                                    </label>
+                                    <input type="tel" name="telefono" class="form-control" placeholder="+56 9 1234 5678" value="{{ request.user.profile.telefono|default:'' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-building"></i> Municipio
+                                    </label>
+                                    <select name="municipio" class="form-select">
+                                        <option value="">Seleccione un municipio</option>
+                                        {% for municipio in municipios %}
+                                            <option value="{{ municipio.id_municipio }}" {% if request.user.profile.municipio_id == municipio.id_municipio %}selected{% endif %}>
+                                                {{ municipio.nombre_municipio }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-briefcase"></i> Cargo/Rol
+                                    </label>
+                                    <input type="text" name="cargo" class="form-control" placeholder="Ej: Administrador" value="{{ request.user.profile.cargo|default:'' }}">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-card-text"></i> Biografía
+                                    </label>
+                                    <textarea name="biografia" class="form-control" rows="3" placeholder="Cuéntanos sobre ti...">{{ request.user.profile.biografia|default:'' }}</textarea>
+                                    <small class="text-muted">Máximo 500 caracteres</small>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                                <button type="button" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle"></i> Cancelar
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle"></i> Guardar Cambios
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cuenta y Seguridad -->
+            <div class="tab-pane fade" id="cuenta">
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-0 pt-3">
+                        <h5 class="mb-1 fw-semibold">
+                            <i class="bi bi-shield-lock text-success"></i> Seguridad de la Cuenta
+                        </h5>
+                        <p class="text-muted small mb-0">Gestiona tu contraseña y configuración de seguridad</p>
+                    </div>
+                    <div class="card-body">
+                        <!-- Información de la cuenta -->
+                        <div class="mb-4">
+                            <h6 class="fw-semibold mb-3">Información de la Cuenta</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3">
+                                        <small class="text-muted d-block mb-1">Nombre de usuario</small>
+                                        <strong>{{ request.user.username }}</strong>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3">
+                                        <small class="text-muted d-block mb-1">Último acceso</small>
+                                        <strong>{{ request.user.last_login|date:"d/m/Y H:i"|default:"Nunca" }}</strong>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3">
+                                        <small class="text-muted d-block mb-1">Fecha de registro</small>
+                                        <strong>{{ request.user.date_joined|date:"d/m/Y" }}</strong>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-3 bg-light rounded-3">
+                                        <small class="text-muted d-block mb-1">Estado de la cuenta</small>
+                                        {% if request.user.is_active %}
+                                            <span class="badge bg-success">Activa</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Inactiva</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cambiar contraseña -->
+                        <div class="mb-4 pb-4 border-bottom">
+                            <h6 class="fw-semibold mb-3">Cambiar Contraseña</h6>
+                            <form method="post" action="" id="formPassword">
+                                {% csrf_token %}
+                                <input type="hidden" name="form_type" value="password">
+                                
+                                <div class="row g-3">
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-bold">Contraseña Actual</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                            <input type="password" name="current_password" class="form-control" id="currentPassword" required>
+                                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('currentPassword')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Nueva Contraseña</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                                            <input type="password" name="new_password" class="form-control" id="newPassword" required>
+                                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('newPassword')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </div>
+                                        <small class="text-muted">Mínimo 8 caracteres</small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Confirmar Contraseña</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                                            <input type="password" name="confirm_password" class="form-control" id="confirmPassword" required>
+                                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('confirmPassword')">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-info mt-3 mb-0">
+                                    <i class="bi bi-info-circle"></i> <strong>Requisitos de contraseña:</strong>
+                                    <ul class="mb-0 mt-2">
+                                        <li>Al menos 8 caracteres</li>
+                                        <li>Incluir letras mayúsculas y minúsculas</li>
+                                        <li>Incluir al menos un número</li>
+                                        <li>Incluir al menos un carácter especial</li>
+                                    </ul>
+                                </div>
+
+                                <div class="d-flex justify-content-end gap-2 mt-3">
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="bi bi-shield-check"></i> Actualizar Contraseña
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Autenticación de dos factores -->
+                        <div class="mb-4 pb-4 border-bottom">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="fw-semibold mb-2">Autenticación de Dos Factores (2FA)</h6>
+                                    <p class="text-muted small mb-0">Añade una capa extra de seguridad a tu cuenta</p>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="enable2FA">
+                                    <label class="form-check-label" for="enable2FA">
+                                        Activar
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sesiones activas -->
+                        <div>
+                            <h6 class="fw-semibold mb-3">Sesiones Activas</h6>
+                            <div class="list-group">
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="d-flex">
+                                            <div class="me-3">
+                                                <i class="bi bi-laptop fs-3 text-primary"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-1">Chrome en Windows</h6>
+                                                <small class="text-muted">
+                                                    <i class="bi bi-geo-alt"></i> Santiago, Chile<br>
+                                                    <i class="bi bi-clock"></i> Última actividad: Hace 5 minutos
+                                                </small>
+                                                <br>
+                                                <span class="badge bg-success mt-1">Sesión actual</span>
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-danger" disabled>
+                                            <i class="bi bi-x-circle"></i> Cerrar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="btn btn-outline-danger btn-sm mt-3">
+                                <i class="bi bi-box-arrow-right"></i> Cerrar todas las sesiones excepto esta
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notificaciones -->
+            <div class="tab-pane fade" id="notificaciones">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-0 pt-3">
+                        <h5 class="mb-1 fw-semibold">
+                            <i class="bi bi-bell text-warning"></i> Preferencias de Notificaciones
+                        </h5>
+                        <p class="text-muted small mb-0">Configura cómo y cuándo quieres recibir notificaciones</p>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="" id="formNotificaciones">
+                            {% csrf_token %}
+                            <input type="hidden" name="form_type" value="notificaciones">
+
+                            <!-- Notificaciones por email -->
+                            <div class="mb-4">
+                                <h6 class="fw-semibold mb-3">Notificaciones por Email</h6>
+                                <div class="list-group">
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="fw-semibold">Nuevas postulaciones</div>
+                                                <small class="text-muted">Recibir email cuando hay nuevas postulaciones</small>
+                                            </div>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" name="notif_postulaciones" checked>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="fw-semibold">Cambios en proyectos</div>
+                                                <small class="text-muted">Alertas sobre actualizaciones de proyectos</small>
+                                            </div>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" name="notif_proyectos" checked>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="fw-semibold">Nuevos beneficiarios</div>
+                                                <small class="text-muted">Notificación de registros nuevos</small>
+                                            </div>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" name="notif_beneficiarios">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="fw-semibold">Reportes semanales</div>
+                                                <small class="text-muted">Resumen semanal de actividad</small>
+                                            </div>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" name="notif_reportes" checked>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Notificaciones en el sistema -->
+                            <div class="mb-4">
+                                <h6 class="fw-semibold mb-3">Notificaciones en el Sistema</h6>
+                                <div class="list-group">
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="fw-semibold">Notificaciones push</div>
+                                                <small class="text-muted">Recibir notificaciones en tiempo real</small>
+                                            </div>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" name="notif_push" checked>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="fw-semibold">Sonidos</div>
+                                                <small class="text-muted">Reproducir sonido con notificaciones</small>
+                                            </div>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" name="notif_sound">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle"></i> Guardar Preferencias
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preferencias -->
+            <div class="tab-pane fade" id="preferencias">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-0 pt-3">
+                        <h5 class="mb-1 fw-semibold">
+                            <i class="bi bi-sliders text-info"></i> Preferencias del Sistema
+                        </h5>
+                        <p class="text-muted small mb-0">Personaliza tu experiencia en el sistema</p>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="" id="formPreferencias">
+                            {% csrf_token %}
+                            <input type="hidden" name="form_type" value="preferencias">
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-palette"></i> Tema de interfaz
+                                    </label>
+                                    <select name="tema" class="form-select">
+                                        <option value="light" selected>Claro</option>
+                                        <option value="dark">Oscuro</option>
+                                        <option value="auto">Automático</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-translate"></i> Idioma
+                                    </label>
+                                    <select name="idioma" class="form-select">
+                                        <option value="es" selected>Español</option>
+                                        <option value="en">English</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-calendar3"></i> Formato de fecha
+                                    </label>
+                                    <select name="formato_fecha" class="form-select">
+                                        <option value="dd/mm/yyyy" selected>DD/MM/YYYY</option>
+                                        <option value="mm/dd/yyyy">MM/DD/YYYY</option>
+                                        <option value="yyyy-mm-dd">YYYY-MM-DD</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-list-ol"></i> Elementos por página
+                                    </label>
+                                    <select name="items_por_pagina" class="form-select">
+                                        <option value="10">10</option>
+                                        <option value="25" selected>25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-12">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="compactMode" name="modo_compacto">
+                                        <label class="form-check-label" for="compactMode">
+                                            <strong>Modo compacto</strong><br>
+                                            <small class="text-muted">Reduce el espaciado para mostrar más información</small>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="col-12">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="autoSave" name="autoguardado" checked>
+                                        <label class="form-check-label" for="autoSave">
+                                            <strong>Autoguardado</strong><br>
+                                            <small class="text-muted">Guardar automáticamente los cambios en formularios</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                                <button type="button" class="btn btn-outline-secondary">
+                                    <i class="bi bi-arrow-counterclockwise"></i> Restablecer
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle"></i> Guardar Preferencias
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actividad -->
+            <div class="tab-pane fade" id="actividad">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white border-0 pt-3">
+                        <h5 class="mb-1 fw-semibold">
+                            <i class="bi bi-clock-history text-secondary"></i> Historial de Actividad
+                        </h5>
+                        <p class="text-muted small mb-0">Revisa tu actividad reciente en el sistema</p>
+                    </div>
+                    <div class="card-body">
+                        <!-- Filtros de actividad -->
+                        <div class="row g-2 mb-4">
+                            <div class="col-md-4">
+                                <select class="form-select form-select-sm">
+                                    <option selected>Todas las acciones</option>
+                                    <option>Creación</option>
+                                    <option>Edición</option>
+                                    <option>Eliminación</option>
+                                    <option>Acceso</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-select form-select-sm">
+                                    <option selected>Últimos 7 días</option>
+                                    <option>Últimos 30 días</option>
+                                    <option>Últimos 3 meses</option>
+                                    <option>Todo el tiempo</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-sm btn-outline-primary w-100">
+                                    <i class="bi bi-download"></i> Exportar historial
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Timeline de actividad -->
+                        <div class="timeline">
+                            <div class="timeline-item mb-4">
+                                <div class="d-flex">
+                                    <div class="timeline-marker me-3">
+                                        <div class="rounded-circle bg-success bg-opacity-10 p-2">
+                                            <i class="bi bi-check-circle text-success"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1 border-bottom pb-3">
+                                        <div class="d-flex justify-content-between">
+                                            <div>
+                                                <p class="mb-1"><strong>Perfil actualizado</strong></p>
+                                                <small class="text-muted">Actualizaste tu información personal</small>
+                                            </div>
+                                            <small class="text-muted">Hace 2 horas</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="timeline-item mb-4">
+                                <div class="d-flex">
+                                    <div class="timeline-marker me-3">
+                                        <div class="rounded-circle bg-primary bg-opacity-10 p-2">
+                                            <i class="bi bi-box-arrow-in-right text-primary"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1 border-bottom pb-3">
+                                        <div class="d-flex justify-content-between">
+                                            <div>
+                                                <p class="mb-1"><strong>Inicio de sesión</strong></p>
+                                                <small class="text-muted">Desde Chrome en Windows · Santiago, Chile</small>
+                                            </div>
+                                            <small class="text-muted">Hace 5 horas</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="timeline-item mb-4">
+                                <div class="d-flex">
+                                    <div class="timeline-marker me-3">
+                                        <div class="rounded-circle bg-info bg-opacity-10 p-2">
+                                            <i class="bi bi-eye text-info"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1 border-bottom pb-3">
+                                        <div class="d-flex justify-content-between">
+                                            <div>
+                                                <p class="mb-1"><strong>Visualización de proyecto</strong></p>
+                                                <small class="text-muted">Viste los detalles del proyecto "Villa Los Alamos"</small>
+                                            </div>
+                                            <small class="text-muted">Hace 1 día</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="timeline-item mb-4">
+                                <div class="d-flex">
+                                    <div class="timeline-marker me-3">
+                                        <div class="rounded-circle bg-warning bg-opacity-10 p-2">
+                                            <i class="bi bi-pencil text-warning"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1 border-bottom pb-3">
+                                        <div class="d-flex justify-content-between">
+                                            <div>
+                                                <p class="mb-1"><strong>Beneficiario editado</strong></p>
+                                                <small class="text-muted">Modificaste los datos de Juan Pérez García</small>
+                                            </div>
+                                            <small class="text-muted">Hace 2 días</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="timeline-item mb-4">
+                                <div class="d-flex">
+                                    <div class="timeline-marker me-3">
+                                        <div class="rounded-circle bg-success bg-opacity-10 p-2">
+                                            <i class="bi bi-plus-circle text-success"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1 border-bottom pb-3">
+                                        <div class="d-flex justify-content-between">
+                                            <div>
+                                                <p class="mb-1"><strong>Nueva postulación creada</strong></p>
+                                                <small class="text-muted">Registraste una postulación para María González</small>
+                                            </div>
+                                            <small class="text-muted">Hace 3 días</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="timeline-item mb-0">
+                                <div class="d-flex">
+                                    <div class="timeline-marker me-3">
+                                        <div class="rounded-circle bg-secondary bg-opacity-10 p-2">
+                                            <i class="bi bi-download text-secondary"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between">
+                                            <div>
+                                                <p class="mb-1"><strong>Reporte descargado</strong></p>
+                                                <small class="text-muted">Descargaste el reporte mensual de beneficiarios</small>
+                                            </div>
+                                            <small class="text-muted">Hace 5 días</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center mt-4">
+                            <button class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-arrow-clockwise"></i> Cargar más actividades
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Zona de peligro -->
+                <div class="card border-danger shadow-sm mt-4">
+                    <div class="card-header bg-danger bg-opacity-10 border-danger">
+                        <h5 class="mb-0 text-danger">
+                            <i class="bi bi-exclamation-triangle-fill"></i> Zona de Peligro
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3 pb-3 border-bottom">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="fw-semibold mb-1">Desactivar cuenta</h6>
+                                    <p class="text-muted small mb-0">Desactiva temporalmente tu cuenta. Podrás reactivarla en cualquier momento.</p>
+                                </div>
+                                <button class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#deactivateModal">
+                                    <i class="bi bi-pause-circle"></i> Desactivar
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="fw-semibold mb-1">Eliminar cuenta</h6>
+                                    <p class="text-muted small mb-0">Elimina permanentemente tu cuenta y todos tus datos. Esta acción no se puede deshacer.</p>
+                                </div>
+                                <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                                    <i class="bi bi-trash"></i> Eliminar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Upload Photo -->
+<div class="modal fade" id="uploadPhotoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-camera"></i> Cambiar Foto de Perfil</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <div class="avatar-xl bg-light rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 150px; height: 150px;">
+                        <i class="bi bi-image fs-1 text-muted"></i>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Seleccionar imagen</label>
+                    <input class="form-control" type="file" accept="image/*">
+                    <small class="text-muted">Formatos permitidos: JPG, PNG, GIF. Tamaño máximo: 5MB</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary">Guardar Foto</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Deactivate Account -->
+<div class="modal fade" id="deactivateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning bg-opacity-10">
+                <h5 class="modal-title text-warning">
+                    <i class="bi bi-exclamation-triangle"></i> Desactivar Cuenta
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas desactivar tu cuenta?</p>
+                <div class="alert alert-warning">
+                    <i class="bi bi-info-circle"></i> <strong>Importante:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>No podrás acceder al sistema mientras tu cuenta esté desactivada</li>
+                        <li>Tus datos se mantendrán seguros</li>
+                        <li>Podrás reactivar tu cuenta en cualquier momento</li>
+                    </ul>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Confirma tu contraseña</label>
+                    <input type="password" class="form-control" placeholder="Ingresa tu contraseña">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-warning">Desactivar Cuenta</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Delete Account -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger bg-opacity-10">
+                <h5 class="modal-title text-danger">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Eliminar Cuenta
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="fw-bold">¿Estás absolutamente seguro de que deseas eliminar tu cuenta?</p>
+                <div class="alert alert-danger">
+                    <i class="bi bi-x-circle"></i> <strong>¡Advertencia!</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Esta acción es <strong>permanente</strong> y no se puede deshacer</li>
+                        <li>Perderás acceso a todos tus datos</li>
+                        <li>No podrás recuperar tu cuenta después</li>
+                    </ul>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Escribe "ELIMINAR" para confirmar</label>
+                    <input type="text" class="form-control" id="confirmDelete" placeholder="ELIMINAR">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Confirma tu contraseña</label>
+                    <input type="password" class="form-control" placeholder="Ingresa tu contraseña">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmDelete" disabled>Eliminar Definitivamente</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .avatar-lg {
+        font-weight: 600;
+    }
+    
+    .timeline-marker {
+        position: relative;
+    }
+    
+    .timeline-item:not(:last-child) .timeline-marker::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 45px;
+        width: 2px;
+        height: calc(100% + 5px);
+        background: #e9ecef;
+        transform: translateX(-50%);
+    }
+    
+    .list-group-item {
+        border-left: none;
+        border-right: none;
+    }
+    
+    .list-group-item:first-child {
+        border-top: none;
+    }
+    
+    .list-group-item:last-child {
+        border-bottom: none;
+    }
+    
+    .form-check-input:checked {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+    
+    .list-group .list-group-item.active {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+    
+    @media (max-width: 991.98px) {
+        .sticky-top {
+            position: relative !important;
+            top: 0 !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Toggle password visibility
+    window.togglePassword = function(inputId) {
+        const input = document.getElementById(inputId);
+        const icon = event.target.closest('button').querySelector('i');
+        
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('bi-eye');
+            icon.classList.add('bi-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('bi-eye-slash');
+            icon.classList.add('bi-eye');
+        }
+    };
+
+    // Validación de contraseña
+    const formPassword = document.getElementById('formPassword');
+    if (formPassword) {
+        formPassword.addEventListener('submit', function(e) {
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (newPassword !== confirmPassword) {
+                e.preventDefault();
+                alert('Las contraseñas no coinciden');
+                return false;
+            }
+            
+            if (newPassword.length < 8) {
+                e.preventDefault();
+                alert('La contraseña debe tener al menos 8 caracteres');
+                return false;
+            }
+        });
+    }
+
+    // Validación para eliminar cuenta
+    const confirmDeleteInput = document.getElementById('confirmDelete');
+    const btnConfirmDelete = document.getElementById('btnConfirmDelete');
+    
+    if (confirmDeleteInput && btnConfirmDelete) {
+        confirmDeleteInput.addEventListener('input', function() {
+            if (this.value === 'ELIMINAR') {
+                btnConfirmDelete.disabled = false;
+            } else {
+                btnConfirmDelete.disabled = true;
+            }
+        });
+    }
+
+    // Confirmación de guardado exitoso
+    const forms = document.querySelectorAll('form[id^="form"]');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            // Aquí puedes agregar validaciones adicionales
+            const formType = this.querySelector('[name="form_type"]')?.value;
+            console.log('Guardando formulario:', formType);
+        });
+    });
+
+    // Mantener tab activo después de recargar
+    const hash = window.location.hash;
+    if (hash) {
+        const tab = document.querySelector(`[href="${hash}"]`);
+        if (tab) {
+            const tabTrigger = new bootstrap.Tab(tab);
+            tabTrigger.show();
+        }
+    }
+
+    // Actualizar URL cuando cambia de tab
+    const tabLinks = document.querySelectorAll('[data-bs-toggle="list"]');
+    tabLinks.forEach(link => {
+        link.addEventListener('shown.bs.tab', function(e) {
+            const href = e.target.getAttribute('href');
+            if (history.pushState) {
+                history.pushState(null, null, href);
+            }
+        });
+    });
+
+    // Preview de imagen
+    const photoInput = document.querySelector('#uploadPhotoModal input[type="file"]');
+    if (photoInput) {
+        photoInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.querySelector('#uploadPhotoModal .avatar-xl');
+                    preview.innerHTML = `<img src="${e.target.result}" class="rounded-circle" style="width: 100%; height: 100%; object-fit: cover;">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // Mostrar mensaje de éxito si viene de un guardado
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('saved') === 'true') {
+        // Crear toast de éxito
+        const toast = document.createElement('div');
+        toast.className = 'toast align-items-center text-white bg-success border-0 position-fixed top-0 end-0 m-3';
+        toast.setAttribute('role', 'alert');
+        toast.style.zIndex = '9999';
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    Cambios guardados exitosamente
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        document.body.appendChild(toast);
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+        
+        // Limpiar URL
+        setTimeout(() => {
+            const cleanUrl = window.location.pathname + window.location.hash;
+            history.replaceState(null, '', cleanUrl);
+        }, 100);
+    }
+});
+</script>
+{% endblock %}

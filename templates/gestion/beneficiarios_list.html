@@ -1,0 +1,451 @@
+{% extends 'gestion/base.html' %}
+
+{% block title %}Beneficiarios - Sistema de Gestión Habitacional{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="bi bi-people-fill"></i> Gestión de Beneficiarios</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        {% if request.user.is_staff or user_tipo == 'admin' %}
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#nuevoBeneficiarioModal">
+            <i class="bi bi-plus-circle"></i> Nuevo Beneficiario
+        </button>
+        <button type="button" class="btn btn-outline-success ms-2" data-bs-toggle="tooltip" title="Exportar a Excel">
+            <i class="bi bi-file-earmark-excel"></i>
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Estadísticas rápidas -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-start border-primary border-4 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="text-muted mb-1">Total Beneficiarios</h6>
+                        <h3 class="mb-0">{{ beneficiarios.count }}</h3>
+                    </div>
+                    <div class="ms-3">
+                        <i class="bi bi-people text-primary" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-start border-success border-4 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="text-muted mb-1">Activos</h6>
+                        <h3 class="mb-0 text-success">{{ stats.activos|default:"0" }}</h3>
+                    </div>
+                    <div class="ms-3">
+                        <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-start border-warning border-4 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="text-muted mb-1">Pendientes</h6>
+                        <h3 class="mb-0 text-warning">{{ stats.pendientes|default:"0" }}</h3>
+                    </div>
+                    <div class="ms-3">
+                        <i class="bi bi-hourglass-split text-warning" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-start border-info border-4 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="text-muted mb-1">Puntaje Promedio</h6>
+                        <h3 class="mb-0 text-info">{{ stats.puntaje_promedio|floatformat:1|default:"N/A" }}</h3>
+                    </div>
+                    <div class="ms-3">
+                        <i class="bi bi-graph-up text-info" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros mejorados -->
+<div class="card mb-4 shadow-sm">
+    <div class="card-header bg-light">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-funnel"></i> Filtros de Búsqueda</h5>
+            {% if request.GET.q or request.GET.estado or request.GET.municipio %}
+            <a href="{% url 'gestion:beneficiarios_list' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-x-circle"></i> Limpiar Filtros
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label fw-bold">
+                    <i class="bi bi-search"></i> Buscar
+                </label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-person-search"></i></span>
+                    <input type="text" class="form-control" name="q" placeholder="Nombre, RUT o Email" value="{{ request.GET.q }}">
+                </div>
+                <small class="text-muted">Buscar por nombre, RUT o correo electrónico</small>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">
+                    <i class="bi bi-flag"></i> Estado
+                </label>
+                <select name="estado" class="form-select">
+                    <option value="">Todos los estados</option>
+                    {% for estado in estados %}
+                        <option value="{{ estado }}" {% if request.GET.estado == estado %}selected{% endif %}>{{ estado }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">
+                    <i class="bi bi-geo-alt"></i> Municipio
+                </label>
+                <select name="municipio" class="form-select">
+                    <option value="">Todos los municipios</option>
+                    {% for municipio in municipios %}
+                        <option value="{{ municipio.id_municipio }}" {% if request.GET.municipio == municipio.id_municipio|stringformat:"s" %}selected{% endif %}>
+                            {{ municipio.nombre_municipio }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> Buscar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tabla de beneficiarios mejorada -->
+<div class="card shadow-sm">
+    <div class="card-header bg-white border-bottom">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-table"></i> Lista de Beneficiarios 
+                <span class="badge bg-primary rounded-pill">{{ beneficiarios.count }}</span>
+            </h5>
+            <div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-outline-secondary active">
+                    <i class="bi bi-table"></i> Tabla
+                </button>
+                <button type="button" class="btn btn-outline-secondary">
+                    <i class="bi bi-grid"></i> Tarjetas
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-nowrap">
+                            <i class="bi bi-card-text"></i> RUT
+                        </th>
+                        <th class="text-nowrap">
+                            <i class="bi bi-person"></i> Nombre Completo
+                        </th>
+                        <th class="text-nowrap">
+                            <i class="bi bi-geo-alt"></i> Municipio
+                        </th>
+                        <th class="text-nowrap text-end">
+                            <i class="bi bi-cash"></i> Ingresos
+                        </th>
+                        <th class="text-nowrap text-center">
+                            <i class="bi bi-star"></i> Puntaje
+                        </th>
+                        <th class="text-nowrap text-center">
+                            <i class="bi bi-flag"></i> Estado
+                        </th>
+                        <th class="text-nowrap">
+                            <i class="bi bi-calendar"></i> Fecha Registro
+                        </th>
+                        <th class="text-nowrap text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for beneficiario in beneficiarios %}
+                    <tr>
+                        <td class="fw-bold text-primary">{{ beneficiario.rut }}</td>
+                        <td>
+                            <a href="{% url 'gestion:beneficiario_detail' beneficiario.id_beneficiario %}" class="text-decoration-none fw-semibold">
+                                <i class="bi bi-person-circle"></i> {{ beneficiario.nombre }} {{ beneficiario.apellidos }}
+                            </a>
+                            {% if beneficiario.email %}
+                            <br><small class="text-muted"><i class="bi bi-envelope"></i> {{ beneficiario.email }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border">
+                                <i class="bi bi-building"></i> {{ beneficiario.id_municipio.nombre_municipio|default:"Sin asignar" }}
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            <span class="fw-semibold">${{ beneficiario.ingresos_familiares|floatformat:0|default:"0" }}</span>
+                        </td>
+                        <td class="text-center">
+                            {% if beneficiario.puntaje_socioeconomico %}
+                                {% if beneficiario.puntaje_socioeconomico >= 75 %}
+                                    <span class="badge bg-success fs-6">{{ beneficiario.puntaje_socioeconomico }}</span>
+                                {% elif beneficiario.puntaje_socioeconomico >= 50 %}
+                                    <span class="badge bg-warning fs-6">{{ beneficiario.puntaje_socioeconomico }}</span>
+                                {% else %}
+                                    <span class="badge bg-danger fs-6">{{ beneficiario.puntaje_socioeconomico }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-secondary fs-6">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if beneficiario.estado_beneficiario == 'Activo' %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle"></i> {{ beneficiario.estado_beneficiario }}
+                                </span>
+                            {% elif beneficiario.estado_beneficiario == 'Pendiente' %}
+                                <span class="badge bg-warning text-dark">
+                                    <i class="bi bi-hourglass-split"></i> {{ beneficiario.estado_beneficiario }}
+                                </span>
+                            {% elif beneficiario.estado_beneficiario == 'Inactivo' %}
+                                <span class="badge bg-secondary">
+                                    <i class="bi bi-x-circle"></i> {{ beneficiario.estado_beneficiario }}
+                                </span>
+                            {% else %}
+                                <span class="badge bg-info">
+                                    <i class="bi bi-info-circle"></i> {{ beneficiario.estado_beneficiario }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small class="text-muted">
+                                <i class="bi bi-calendar-check"></i> {{ beneficiario.fecha_registro|date:"d/m/Y" }}
+                            </small>
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{% url 'gestion:beneficiario_detail' beneficiario.id_beneficiario %}" 
+                                   class="btn btn-outline-info" 
+                                   data-bs-toggle="tooltip" 
+                                   title="Ver detalles">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if request.user.is_staff or user_tipo == 'admin' %}
+                                <button class="btn btn-outline-warning" 
+                                        data-bs-toggle="tooltip" 
+                                        title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" 
+                                        data-bs-toggle="tooltip" 
+                                        title="Eliminar"
+                                        onclick="return confirm('¿Está seguro de eliminar este beneficiario?')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <div class="text-muted">
+                                <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                                <p class="mt-3 mb-0">No se encontraron beneficiarios con los filtros aplicados</p>
+                                {% if request.GET.q or request.GET.estado or request.GET.municipio %}
+                                <a href="{% url 'gestion:beneficiarios_list' %}" class="btn btn-sm btn-primary mt-2">
+                                    <i class="bi bi-arrow-counterclockwise"></i> Ver todos los beneficiarios
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Paginación -->
+    {% if beneficiarios.has_other_pages %}
+    <div class="card-footer bg-white">
+        <nav aria-label="Paginación de beneficiarios">
+            <ul class="pagination justify-content-center mb-0">
+                {% if beneficiarios.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}{% if request.GET.municipio %}&municipio={{ request.GET.municipio }}{% endif %}">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ beneficiarios.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}{% if request.GET.municipio %}&municipio={{ request.GET.municipio }}{% endif %}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">
+                        Página {{ beneficiarios.number }} de {{ beneficiarios.paginator.num_pages }}
+                    </span>
+                </li>
+
+                {% if beneficiarios.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ beneficiarios.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}{% if request.GET.municipio %}&municipio={{ request.GET.municipio }}{% endif %}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ beneficiarios.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}{% if request.GET.municipio %}&municipio={{ request.GET.municipio }}{% endif %}">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal Nuevo Beneficiario Mejorado -->
+<div class="modal fade" id="nuevoBeneficiarioModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-person-plus"></i> Registrar Nuevo Beneficiario</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'gestion:create_beneficiario' %}" id="formNuevoBeneficiario">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-card-text"></i> RUT <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" name="rut" class="form-control" placeholder="12.345.678-9" required>
+                            <small class="text-muted">Formato: XX.XXX.XXX-X</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-person"></i> Nombre <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" name="nombre" class="form-control" placeholder="Ingrese el nombre" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-person"></i> Apellidos <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" name="apellidos" class="form-control" placeholder="Ingrese los apellidos" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-envelope"></i> Email
+                            </label>
+                            <input type="email" name="email" class="form-control" placeholder="correo@ejemplo.com">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-telephone"></i> Teléfono
+                            </label>
+                            <input type="tel" name="telefono" class="form-control" placeholder="+56 9 1234 5678">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-building"></i> Municipio
+                            </label>
+                            <select name="municipio" class="form-select">
+                                <option value="">Seleccione un municipio</option>
+                                {% for municipio in municipios %}
+                                    <option value="{{ municipio.id_municipio }}">{{ municipio.nombre_municipio }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <div class="alert alert-info mb-0">
+                                <i class="bi bi-info-circle"></i> Los campos marcados con <span class="text-danger">*</span> son obligatorios
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </button>
+                <button type="submit" form="formNuevoBeneficiario" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> Registrar Beneficiario
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script para tooltips y modal -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Nueva función que elimina completamente todos los elementos que pueden bloquear la interfaz
+    function limpiarBackdrops() {
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(backdrop => backdrop.remove());
+        // Remover clases del body
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+        // Asegurar que no haya pointer-events bloqueados
+        document.body.style.pointerEvents = '';
+    }
+
+    // Limpiar cualquier backdrop residual al cargar la página
+    limpiarBackdrops();
+
+    // Inicializar tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Manejar el modal sin backdrop para evitar pantalla gris
+    const modalElement = document.getElementById('nuevoBeneficiarioModal');
+    if (modalElement) {
+        const modal = new bootstrap.Modal(modalElement, { backdrop: false });
+
+        // Cerrar modal al enviar formulario
+        const form = document.getElementById('formNuevoBeneficiario');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault(); // Prevenir envío inmediato
+
+                // Ocultar el modal antes de enviar
+                modal.hide();
+
+                // Enviar el formulario
+                form.submit();
+            });
+        }
+    }
+});
+</script>
+
+{% endblock %}

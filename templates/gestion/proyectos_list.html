@@ -1,0 +1,795 @@
+{% extends 'gestion/base.html' %}
+
+{% block title %}Proyectos Habitacionales - Sistema de Gestión{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-4">
+    <div>
+        <h1 class="h2 text-white mb-2">
+            <i class="bi bi-building"></i> Proyectos Habitacionales
+        </h1>
+        <p class="text-white opacity-75 mb-0">Explora y gestiona proyectos de vivienda</p>
+    </div>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button class="btn btn-light me-2" onclick="cambiarVista('grid')" id="btnGrid">
+            <i class="bi bi-grid-3x3-gap"></i>
+        </button>
+        <button class="btn btn-outline-light me-2" onclick="cambiarVista('list')" id="btnList">
+            <i class="bi bi-list-ul"></i>
+        </button>
+        {% if user.is_staff or user_tipo == 'empresa' %}
+        <a class="btn btn-primary" href="{% url 'gestion:proyecto_create' %}">
+            <i class="bi bi-plus-circle-fill"></i> Nuevo Proyecto
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Mapa interactivo (Tullim si está disponible, fallback a Leaflet) -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="mb-0"><i class="bi bi-map"></i> Mapa de Proyectos</h5>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary" id="btnToggleMap">Mostrar/Ocultar Mapa</button>
+            </div>
+        </div>
+        <div id="mapArea" style="height:420px; display:none;" class="map-container"></div>
+    </div>
+</div>
+
+<!-- Estadísticas rápidas -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stats-mini">
+            <div class="stats-icon bg-primary">
+                <i class="bi bi-building"></i>
+            </div>
+            <div class="stats-info">
+                <h3>{{ proyectos.count }}</h3>
+                <p>Total Proyectos</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-mini">
+            <div class="stats-icon bg-warning">
+                <i class="bi bi-hammer"></i>
+            </div>
+            <div class="stats-info">
+                <h3 id="enConstruccion">0</h3>
+                <p>En Construcción</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-mini">
+            <div class="stats-icon bg-success">
+                <i class="bi bi-check-circle"></i>
+            </div>
+            <div class="stats-info">
+                <h3 id="finalizados">0</h3>
+                <p>Finalizados</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-mini">
+            <div class="stats-icon bg-info">
+                <i class="bi bi-houses"></i>
+            </div>
+            <div class="stats-info">
+                <h3 id="totalViviendas">0</h3>
+                <p>Viviendas Totales</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros avanzados -->
+<div class="card filters-card mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">
+                <i class="bi bi-funnel-fill"></i> Filtros de Búsqueda
+            </h5>
+            <button class="btn btn-sm btn-outline-secondary" onclick="limpiarFiltros()">
+                <i class="bi bi-arrow-clockwise"></i> Limpiar
+            </button>
+        </div>
+        
+        <form method="get" class="row g-3" id="filterForm">
+            <div class="col-md-3">
+                <label class="form-label">
+                    <i class="bi bi-search"></i> Buscar Proyecto
+                </label>
+                <input type="text" name="q" class="form-control" placeholder="Nombre del proyecto..." value="{{ request.GET.q }}">
+            </div>
+            
+            <div class="col-md-2">
+                <label class="form-label">
+                    <i class="bi bi-check-circle"></i> Estado
+                </label>
+                <select name="estado" class="form-select">
+                    <option value="">Todos</option>
+                    {% for estado in estados %}
+                        <option value="{{ estado }}" {% if request.GET.estado == estado %}selected{% endif %}>{{ estado }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label">
+                    <i class="bi bi-geo-alt"></i> Municipio
+                </label>
+                <select name="municipio" class="form-select">
+                    <option value="">Todos</option>
+                    {% for municipio in municipios %}
+                        <option value="{{ municipio.id_municipio }}" {% if request.GET.municipio == municipio.id_municipio|stringformat:"s" %}selected{% endif %}>
+                            {{ municipio.nombre_municipio }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label class="form-label">
+                    <i class="bi bi-house"></i> Tipo Vivienda
+                </label>
+                <select name="tipo" class="form-select">
+                    <option value="">Todos</option>
+                    {% for tipo in tipos %}
+                        <option value="{{ tipo }}" {% if request.GET.tipo == tipo %}selected{% endif %}>{{ tipo }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> Buscar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Vista Grid (por defecto) -->
+<div id="vistaGrid" class="proyectos-grid">
+    {% for proyecto in proyectos %}
+    <div class="proyecto-card" data-estado="{{ proyecto.estado_proyecto }}" data-viviendas="{{ proyecto.numero_viviendas }}">
+        <div class="card-status {% if proyecto.estado_proyecto == 'Finalizado' %}success{% elif proyecto.estado_proyecto == 'En Construcción' %}warning{% else %}info{% endif %}"></div>
+        
+        <div class="proyecto-image">
+            <div class="image-placeholder">
+                <i class="bi bi-building"></i>
+            </div>
+            <div class="proyecto-badges">
+                {% if proyecto.estado_proyecto == 'En Construcción' %}
+                    <span class="badge-floating badge-warning">
+                        <i class="bi bi-hammer"></i> En Construcción
+                    </span>
+                {% elif proyecto.estado_proyecto == 'Finalizado' %}
+                    <span class="badge-floating badge-success">
+                        <i class="bi bi-check-circle"></i> Finalizado
+                    </span>
+                {% else %}
+                    <span class="badge-floating badge-info">
+                        <i class="bi bi-clock"></i> {{ proyecto.estado_proyecto }}
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="proyecto-content">
+            <h5 class="proyecto-title">{{ proyecto.nombre_proyecto }}</h5>
+            
+            <div class="proyecto-location">
+                <i class="bi bi-geo-alt-fill"></i>
+                <span>{{ proyecto.id_municipio.nombre_municipio|default:"N/A" }}</span>
+            </div>
+            
+            <div class="proyecto-empresa">
+                <i class="bi bi-briefcase-fill"></i>
+                <span>{{ proyecto.id_empresa_constructora.razon_social|default:"N/A" }}</span>
+            </div>
+            
+            <div class="proyecto-stats">
+                <div class="stat-item">
+                    <div class="stat-icon">
+                        <i class="bi bi-houses-fill"></i>
+                    </div>
+                    <div class="stat-details">
+                        <strong>{{ proyecto.numero_viviendas }}</strong>
+                        <small>Viviendas</small>
+                    </div>
+                </div>
+                
+                <div class="stat-item">
+                    <div class="stat-icon">
+                        <i class="bi bi-rulers"></i>
+                    </div>
+                    <div class="stat-details">
+                        <strong>{{ proyecto.superficie_vivienda }}m²</strong>
+                        <small>Superficie</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="proyecto-type">
+                <span class="type-badge">
+                    <i class="bi bi-house-door"></i> {{ proyecto.tipo_vivienda|default:"N/A" }}
+                </span>
+            </div>
+            
+            <div class="proyecto-dates">
+                <div class="date-item">
+                    <i class="bi bi-calendar-event"></i>
+                    <small>Inicio: {{ proyecto.fecha_inicio|date:"d/m/Y"|default:"N/A" }}</small>
+                </div>
+                <div class="date-item">
+                    <i class="bi bi-calendar-check"></i>
+                    <small>Fin Est.: {{ proyecto.fecha_fin_estimada|date:"d/m/Y"|default:"N/A" }}</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="proyecto-footer">
+            <a href="{% url 'gestion:proyecto_detail' proyecto.id_proyecto %}" class="btn btn-primary btn-sm w-100">
+                <i class="bi bi-eye-fill"></i> Ver Detalles
+            </a>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="empty-state">
+            <i class="bi bi-inbox"></i>
+            <h4>No se encontraron proyectos</h4>
+            <p>No hay proyectos que coincidan con los filtros aplicados</p>
+            {% if user.is_staff or user_tipo == 'empresa' %}
+            <a href="{% url 'gestion:proyecto_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Crear Primer Proyecto
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Vista Lista (oculta por defecto) -->
+<div id="vistaList" style="display: none;">
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table modern-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Proyecto</th>
+                            <th>Ubicación</th>
+                            <th>Empresa</th>
+                            <th>Viviendas</th>
+                            <th>Superficie</th>
+                            <th>Estado</th>
+                            <th>Fechas</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for proyecto in proyectos %}
+                        <tr>
+                            <td>
+                                <div class="project-info">
+                                    <div class="project-icon">
+                                        <i class="bi bi-building"></i>
+                                    </div>
+                                    <div>
+                                        <strong>{{ proyecto.nombre_proyecto }}</strong>
+                                        <small class="d-block text-muted">{{ proyecto.tipo_vivienda|default:"N/A" }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="location-badge">
+                                    <i class="bi bi-geo-alt"></i>
+                                    {{ proyecto.id_municipio.nombre_municipio|default:"N/A" }}
+                                </span>
+                            </td>
+                            <td>{{ proyecto.id_empresa_constructora.razon_social|default:"N/A" }}</td>
+                            <td><strong>{{ proyecto.numero_viviendas }}</strong></td>
+                            <td>{{ proyecto.superficie_vivienda }}m²</td>
+                            <td>
+                                {% if proyecto.estado_proyecto == 'Finalizado' %}
+                                    <span class="status-badge status-success">
+                                        <i class="bi bi-circle-fill"></i> Finalizado
+                                    </span>
+                                {% elif proyecto.estado_proyecto == 'En Construcción' %}
+                                    <span class="status-badge status-warning">
+                                        <i class="bi bi-circle-fill"></i> En Construcción
+                                    </span>
+                                {% else %}
+                                    <span class="status-badge status-info">
+                                        <i class="bi bi-circle-fill"></i> {{ proyecto.estado_proyecto }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small class="d-block">Inicio: {{ proyecto.fecha_inicio|date:"d/m/Y"|default:"N/A" }}</small>
+                                <small class="text-muted">Fin: {{ proyecto.fecha_fin_estimada|date:"d/m/Y"|default:"N/A" }}</small>
+                            </td>
+                            <td>
+                                <a href="{% url 'gestion:proyecto_detail' proyecto.id_proyecto %}" class="btn btn-sm btn-info">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.stats-mini {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+}
+
+.stats-mini:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.stats-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    color: white;
+}
+
+.stats-info h3 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.stats-info p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.proyectos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+}
+
+.proyecto-card {
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.proyecto-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.card-status {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    z-index: 10;
+}
+
+.card-status.success {
+    background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+}
+
+.card-status.warning {
+    background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%);
+}
+
+.card-status.info {
+    background: linear-gradient(90deg, #06b6d4 0%, #22d3ee 100%);
+}
+
+.proyecto-image {
+    position: relative;
+    height: 200px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.image-placeholder {
+    font-size: 5rem;
+    color: rgba(99, 102, 241, 0.3);
+}
+
+.proyecto-badges {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+}
+
+.badge-floating {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.badge-success {
+    background: rgba(16, 185, 129, 0.9);
+    color: white;
+}
+
+.badge-warning {
+    background: rgba(245, 158, 11, 0.9);
+    color: white;
+}
+
+.badge-info {
+    background: rgba(6, 182, 212, 0.9);
+    color: white;
+}
+
+.proyecto-content {
+    padding: 1.5rem;
+}
+
+.proyecto-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 1rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.proyecto-location,
+.proyecto-empresa {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.8rem;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.proyecto-location i,
+.proyecto-empresa i {
+    color: var(--primary);
+}
+
+.proyecto-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 12px;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.stat-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    font-size: 1.2rem;
+}
+
+.stat-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-details strong {
+    font-size: 1.1rem;
+    color: #1f2937;
+}
+
+.stat-details small {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.proyecto-type {
+    margin-bottom: 1rem;
+}
+
+.type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.8rem;
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--primary);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.proyecto-dates {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.date-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.date-item i {
+    color: var(--primary);
+}
+
+.proyecto-footer {
+    padding: 1rem 1.5rem;
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 5rem 2rem;
+    background: white;
+    border-radius: 20px;
+}
+
+.empty-state i {
+    font-size: 6rem;
+    color: rgba(99, 102, 241, 0.2);
+    margin-bottom: 1.5rem;
+}
+
+.empty-state h4 {
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+    color: #6c757d;
+    margin-bottom: 2rem;
+}
+
+.project-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.project-icon {
+    width: 45px;
+    height: 45px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    font-size: 1.3rem;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.status-success {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+}
+
+.status-warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning);
+}
+
+.status-info {
+    background: rgba(6, 182, 212, 0.1);
+    color: var(--info);
+}
+
+.status-badge i {
+    font-size: 0.6rem;
+}
+
+@media (max-width: 768px) {
+    .proyectos-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+function cambiarVista(tipo) {
+    const vistaGrid = document.getElementById('vistaGrid');
+    const vistaList = document.getElementById('vistaList');
+    const btnGrid = document.getElementById('btnGrid');
+    const btnList = document.getElementById('btnList');
+    
+    if (tipo === 'grid') {
+        vistaGrid.style.display = 'grid';
+        vistaList.style.display = 'none';
+        btnGrid.classList.remove('btn-outline-light');
+        btnGrid.classList.add('btn-light');
+        btnList.classList.remove('btn-light');
+        btnList.classList.add('btn-outline-light');
+    } else {
+        vistaGrid.style.display = 'none';
+        vistaList.style.display = 'block';
+        btnGrid.classList.remove('btn-light');
+        btnGrid.classList.add('btn-outline-light');
+        btnList.classList.remove('btn-outline-light');
+        btnList.classList.add('btn-light');
+    }
+}
+
+function limpiarFiltros() {
+    window.location.href = window.location.pathname;
+}
+
+// Calcular estadísticas
+document.addEventListener('DOMContentLoaded', () => {
+    const cards = document.querySelectorAll('.proyecto-card');
+    let enConstruccion = 0;
+    let finalizados = 0;
+    let totalViviendas = 0;
+    
+    cards.forEach(card => {
+        const estado = card.dataset.estado;
+        const viviendas = parseInt(card.dataset.viviendas) || 0;
+        
+        if (estado === 'En Construcción') enConstruccion++;
+        if (estado === 'Finalizado') finalizados++;
+        totalViviendas += viviendas;
+    });
+    
+    document.getElementById('enConstruccion').textContent = enConstruccion;
+    document.getElementById('finalizados').textContent = finalizados;
+    document.getElementById('totalViviendas').textContent = totalViviendas;
+    
+    // Animación de entrada
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+</script>
+
+<!-- Map scripts: Leaflet CDN + app logic. Si existe Tullim en window, se intentará usar primero -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="" crossorigin=""></script>
+<script>
+document.getElementById('btnToggleMap').addEventListener('click', () => {
+    const area = document.getElementById('mapArea');
+    if (area.style.display === 'none' || !area.style.display) {
+        area.style.display = 'block';
+        if (!window._proyectosMapaInicializado) initProyectosMap();
+    } else {
+        area.style.display = 'none';
+    }
+});
+
+async function initProyectosMap(){
+    window._proyectosMapaInicializado = true;
+    // Intentar usar Tullim si está cargado
+    if (window.Tullim && typeof window.Tullim.createMap === 'function'){
+        // Placeholder: llamar a la API Tullim si el script está disponible.
+        // El uso exacto depende del SDK de Tullim; si lo integras, reemplaza este bloque.
+        try{
+            const map = window.Tullim.createMap(document.getElementById('mapArea'), { zoom: 6 });
+            const resp = await fetch('/api/proyectos/?page_size=1000', { credentials: 'same-origin' });
+            const data = await resp.json();
+            const proyectos = data.results || data;
+            proyectos.forEach(p => {
+                    const lat = p.latitud || p.terreno_latitud || p.empresa_latitud || (p.id_terreno && p.id_terreno.latitud);
+                    const lng = p.longitud || p.terreno_longitud || p.empresa_longitud || (p.id_terreno && p.id_terreno.longitud);
+                if (lat && lng){
+                    // placeholder: la SDK de Tullim debería ofrecer una función similar
+                    map.addMarker({ lat: parseFloat(lat), lng: parseFloat(lng), popup: `<strong>${p.nombre_proyecto}</strong><br>${p.direccion_terreno || ''}` });
+                }
+            });
+            return;
+        }catch(e){
+            console.warn('Error usando Tullim SDK, fallback a Leaflet', e);
+        }
+    }
+
+    // Fallback Leaflet
+    const map = L.map('mapArea').setView([-33.45, -70.6667], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const resp = await fetch('/api/proyectos/?page_size=1000', { credentials: 'same-origin' });
+    const data = await resp.json();
+    const proyectos = data.results || data;
+    proyectos.forEach(p => {
+        (async () => {
+            let lat = p.latitud || p.terreno_latitud || p.empresa_latitud || (p.id_terreno && p.id_terreno.latitud);
+            let lng = p.longitud || p.terreno_longitud || p.empresa_longitud || (p.id_terreno && p.id_terreno.longitud);
+            if (!lat || !lng) {
+                // Intentar geocodificar en cliente usando municipio + direccion/nombre
+                const municipio = (p.nombre_municipio) ? p.nombre_municipio : (p.id_municipio ? p.id_municipio.nombre_municipio : '');
+                const address = p.direccion_terreno || p.nombre_proyecto || '';
+                if (municipio || address) {
+                    const q = encodeURIComponent((address ? address + ', ' : '') + (municipio ? municipio + ', Chile' : 'Chile'));
+                    try {
+                        const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`);
+                        const j = await r.json();
+                        if (j && j.length > 0) {
+                            lat = j[0].lat;
+                            lng = j[0].lon;
+                        }
+                    } catch(e) {
+                        console.warn('Geocode error', e);
+                    }
+                }
+            }
+            if (lat && lng) {
+                const marker = L.marker([parseFloat(lat), parseFloat(lng)]).addTo(map);
+                const popup = `<strong>${p.nombre_proyecto}</strong><br>${p.direccion_terreno || ''}<br><small>${p.razon_social_empresa || ''}</small><br><a href='/proyectos/${p.id_proyecto}/'>Ver detalle</a>`;
+                marker.bindPopup(popup);
+            }
+        })();
+    });
+}
+</script>
+
+{% endblock %}

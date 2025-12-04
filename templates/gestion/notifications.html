@@ -1,0 +1,30 @@
+{% extends 'gestion/base.html' %}
+
+{% block title %}Notificaciones{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="card">
+    <div class="card-header">Notificaciones</div>
+    <div class="card-body">
+      {% if notifications %}
+        <ul class="list-group">
+          {% for n in notifications %}
+            <li class="list-group-item d-flex justify-content-between align-items-start">
+              <div>
+                <div class="fw-bold">{{ n.title }}</div>
+                <div class="small text-muted">{{ n.body }}</div>
+              </div>
+              {% if not n.read %}
+                <span class="badge bg-primary rounded-pill">Nuevo</span>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-muted">No hay notificaciones.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
