@@ -33,7 +33,7 @@ CSRF_COOKIE_SECURE = False  # En desarrollo lo dejamos en False
 CSRF_COOKIE_HTTPONLY = False  # Permitir acceso desde JavaScript
 CSRF_COOKIE_SAMESITE = 'Lax'  # Cookies entre sitios
 CSRF_TRUSTED_ORIGINS = [
-    'https://habitatchile.onrender.com',
+    'https://habitatchile-backend.onrender.com',
 ]
 CSRF_USE_SESSIONS = True  # Guardar CSRF token en sesión
 CSRF_COOKIE_AGE = 31449600  # 1 año en segundos
